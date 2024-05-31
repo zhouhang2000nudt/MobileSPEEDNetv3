@@ -25,10 +25,11 @@ imgsz: [480, 768]     # 图片大小 [480, 768]
 
 
 # ==========================model==========================
+backbone: mobilenet_v3_large
 pos_dim: 3                             # 位置维度
 stride: 5                            # 步长 度
-neighbour: 3                             # 邻居
-alpha: 0.1                            # 平滑因子
+neighbor: 3                             # 邻居
+ratio: 0.1                            # 平滑因子
 pretrained: true
 deform_layers: []
 neck: FPNPAN                            # FPNPAN/BiFPN/AFPN
@@ -66,6 +67,9 @@ gamma: 0.1            # 学习率衰减因子
 milestones: [30, 60]  # 学习率衰减里程碑
 
 # ==========================Augmentation===================
+Augmentation:
+  p: 0.2
+
 Rotate:
   Rotate_img: true
   Rotate_cam: true
@@ -74,3 +78,7 @@ Rotate:
   p: 0.8             # p为图片旋转的概率，(1-p)为相机旋转的概率
 
 CropAndPadding: 0.5
+
+DropBlockSafe:
+  p: 0.2
+  drop_num: 5
