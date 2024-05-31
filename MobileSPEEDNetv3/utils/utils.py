@@ -20,8 +20,11 @@ class Camera:
     fx = fwx / ppx  # horizontal focal length[pixels]
     fy = fwy / ppy  # vertical focal length[pixels]
 
-    K = np.array([[fx, 0, width / 2], [0, fy, height / 2], [0, 0, 1]])
-    K_inv = np.linalg.inv(K)
+    def __init__(self, config):
+        self.K = np.array([[self.fx, 0, self.width / 2], [0, self.fy, self.height / 2], [0, 0, 1]])
+        self.K_inv = np.linalg.inv(self.K)
+        self.S = np.array([[config["imgsz"][1] / self.width, 0, 0], [0, config["imgsz"][0] / self.height, 0], [0, 0, 1]])
+        self.S_inv = np.linalg.inv(self.S)
 
 
 def wrap_boxes(boxes, M, width, height):
@@ -99,7 +102,7 @@ def clamp(bbox):
     return bbox
 
 
-def rotate_image(image, pos, ori, camera_k, camera_k_inv, rot_max_magnitude):
+def rotate_image(image, pos, ori, camera, rot_max_magnitude):
     """Data augmentation: rotate image and adapt position/orientation.
     Rotation amplitude is randomly picked from [-rot_max_magnitude/2, +rot_max_magnitude/2]
     """
@@ -114,11 +117,11 @@ def rotate_image(image, pos, ori, camera_k, camera_k_inv, rot_max_magnitude):
     
 
     # Construct warping (perspective) matrix
-    warp_matrix = camera_k @ r_change @ camera_k_inv
+    warp_matrix = camera.S @ camera.K @ r_change @ camera.K_inv @ camera.S_inv
 
     height, width = np.shape(image)[:2]
 
-    image_warped = cv2.warpPerspective(image, warp_matrix, (width, height), cv2.WARP_INVERSE_MAP)
+    image_warped = cv2.warpPerspective(image, warp_matrix, (width, height), cv2.WARP_INVERSE_MAP, flags=cv2.INTER_LINEAR)
 
     # Update pose
     pos_new = np.array(r_change @ pos)
@@ -129,7 +132,7 @@ def rotate_image(image, pos, ori, camera_k, camera_k_inv, rot_max_magnitude):
     return image_warped, pos_new, ori_new, warp_matrix
 
 
-def rotate_cam(image, pos, ori, camera_k, camera_k_inv, rot_max_magnitude):
+def rotate_cam(image, pos, ori, camera, rot_max_magnitude):
     """Data augmentation: rotate image and adapt position/orientation.
     Rotation amplitude is randomly picked from [-rot_max_magnitude/2, +rot_max_magnitude/2]
     """
@@ -144,11 +147,11 @@ def rotate_cam(image, pos, ori, camera_k, camera_k_inv, rot_max_magnitude):
     
 
     # Construct warping (perspective) matrix
-    warp_matrix = camera_k @ r_change @ camera_k_inv
+    warp_matrix = camera.S @ camera.K @ r_change @ camera.K_inv @ camera.S_inv
 
     height, width = np.shape(image)[:2]
 
-    image_warped = cv2.warpPerspective(image, warp_matrix, (width, height), cv2.WARP_INVERSE_MAP)
+    image_warped = cv2.warpPerspective(image, warp_matrix, (width, height), cv2.WARP_INVERSE_MAP, flags=cv2.INTER_LINEAR)
 
     # Update pose
     pos_new = np.array(r_change @ pos)
