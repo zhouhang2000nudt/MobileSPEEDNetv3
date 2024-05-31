@@ -61,7 +61,7 @@ def quat2dcm(q):
     return dcm
 
 
-def project(q, r, K):
+def project(q, r, K, scale):
 
         """ Projecting points to image frame to draw axes """
 
@@ -84,6 +84,9 @@ def project(q, r, K):
 
         # projection to image plane
         points_image_plane = K @ points_camera_frame
+        
+        S = np.array([[scale, 0, 0], [0, scale, 0], [0, 0, 1]])
+        points_image_plane = S @ points_image_plane
 
         x, y = (points_image_plane[0], points_image_plane[1])
         return x, y
@@ -97,14 +100,14 @@ def visualize_axes(ax, q, r, K, scale):
             ax = plt.gca()
 
         # no pose label for test
-        xa, ya = project(q, r, K)
-        ax.arrow(xa[0], ya[0], xa[1] - xa[0], ya[1] - ya[0], head_width=30, color='r')
-        ax.arrow(xa[0], ya[0], xa[2] - xa[0], ya[2] - ya[0], head_width=30, color='g')
-        ax.arrow(xa[0], ya[0], xa[3] - xa[0], ya[3] - ya[0], head_width=30, color='b')
+        xa, ya = project(q, r, K, scale)
+        ax.arrow(xa[0], ya[0], xa[1] - xa[0], ya[1] - ya[0], head_width=20 * scale, color='r')
+        ax.arrow(xa[0], ya[0], xa[2] - xa[0], ya[2] - ya[0], head_width=20 * scale, color='g')
+        ax.arrow(xa[0], ya[0], xa[3] - xa[0], ya[3] - ya[0], head_width=20 * scale, color='b')
 
         return
 
-def visualize(image, bboxes, category_ids, category_id_to_name, ori, pos, K):
+def visualize(image, bboxes, category_ids, category_id_to_name, ori, pos, K, scale):
     bboxes[0][0] = int(bboxes[0][0])
     bboxes[0][1] = int(bboxes[0][1])
     bboxes[0][2] = int(bboxes[0][2])
@@ -116,7 +119,6 @@ def visualize(image, bboxes, category_ids, category_id_to_name, ori, pos, K):
     fig, ax = plt.subplots(1, 1, figsize=(12, 8))
     ax.set_xticks([])
     ax.set_yticks([])
-    axis_length = 200
-    visualize_axes(ax, np.array(ori), np.array(pos), K, axis_length)
+    visualize_axes(ax, np.array(ori), np.array(pos), K, scale)
     ax.imshow(img, cmap='gray')
     plt.show()

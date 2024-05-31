@@ -14,7 +14,7 @@ category_ids = [1]
 category_id_to_name = {1: 'satellite'}
 
 config = get_config()
-camera = Camera()
+camera = Camera(config)
 config["ram"] = False
 prepare_Speed(config)
 speed = Speed("train")
@@ -24,7 +24,6 @@ for i in range(len(speed)):
 print(y["filename"])
 print(image.shape)
 image_pil = ToPILImage()(image)
-image_pil = image_pil.resize((1920, 1200))
 image = np.array(image_pil)
 pos = y["pos"]
 ori = y["ori"]
@@ -33,4 +32,4 @@ print("ori", ori)
 print("pos", pos)
 print("bbox", bbox)
 
-visualize(image, [bbox], category_ids, category_id_to_name, ori, pos, camera.K)
+visualize(image, [bbox], category_ids, category_id_to_name, ori, pos, camera.K, scale=image.shape[0]/1200)
