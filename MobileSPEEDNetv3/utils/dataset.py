@@ -92,12 +92,12 @@ def prepare_Speed(config: dict):
                                  p=0.2),
                     A.GaussianBlur(blur_limit=(3, 7),
                                    p=0.2),
-                    ], p=0.2),
+                    ], p=config["Augmentation"]["p"]),
                 A.ColorJitter(brightness=0.3,
                               contrast=0.3,
                               saturation=0.3,
                               hue=0.3,
-                              p=0.2),
+                              p=config["Augmentation"]["p"]),
             ],
             p=1,
             bbox_params=A.BboxParams(format="pascal_voc", label_fields=["category_ids"]))
@@ -205,7 +205,7 @@ def prepare_Speed(config: dict):
         Speed.read_img()
     
     # 设置姿态编码解码器
-    Speed.ori_encoder_decoder = OriEncoderDecoder(Speed.config["stride"], Speed.config["alpha"], Speed.config["neighbour"])
+    Speed.ori_encoder_decoder = OriEncoderDecoder(Speed.config["stride"], Speed.config["ratio"], Speed.config["neighbor"])
 
 
 class ImageReader(Thread):
