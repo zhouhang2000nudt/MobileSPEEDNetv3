@@ -9,5 +9,6 @@ pretrained/
 
 tempCodeRunnerFile.py
 
+*.cpython-310.pyc
 *.pyc
 *.pyo
