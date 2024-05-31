@@ -57,7 +57,7 @@ class LightningMobileSPEEDv3(L.LightningModule):
 
     # ===========================train===========================
     def on_train_start(self):
-        self.logger.experiment.log_asset_folder(folder="MobileSPEEDv3", log_file_name=True, recursive=True)
+        self.logger.experiment.log_asset_folder(folder="MobileSPEEDNetv3", log_file_name=True, recursive=True)
 
 
     def training_step(self, batch, batch_idx):

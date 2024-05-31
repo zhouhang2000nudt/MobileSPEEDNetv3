@@ -281,7 +281,7 @@ class Speed(Dataset):
                         wrapped = False
                         break
                     wrapped_time += 1
-                    image_wrapped, pos_wrapped, ori_wrapped, M_wrapped = rotate_image(image, pos, ori, Speed.camera.K, Speed.config["Rotate"]["img_angle"])
+                    image_wrapped, pos_wrapped, ori_wrapped, M_wrapped = rotate_image(image, pos, ori, Speed.camera.K, Speed.camera.K_inv, Speed.config["Rotate"]["img_angle"])
                     bbox_wrapped = wrap_boxes(np.array([bbox]), M_wrapped, height=1200, width=1920).tolist()[0]
                     if bbox_in_image(bbox_wrapped, bbox_area):
                         wrapped = True
@@ -292,7 +292,7 @@ class Speed(Dataset):
                         wrapped = False
                         break
                     wrapped_time += 1
-                    image_wrapped, pos_wrapped, ori_wrapped, M_wrapped = rotate_cam(image, pos, ori, Speed.camera.K, Speed.config["Rotate"]["cam_angle"])
+                    image_wrapped, pos_wrapped, ori_wrapped, M_wrapped = rotate_cam(image, pos, ori, Speed.camera.K, Speed.camera.K_inv, Speed.config["Rotate"]["cam_angle"])
                     bbox_wrapped = wrap_boxes(np.array([bbox]), M_wrapped, height=1200, width=1920).tolist()[0]
                     if bbox_in_image(bbox_wrapped, bbox_area):
                         wrapped = True
@@ -324,7 +324,7 @@ class Speed(Dataset):
                 transformed = self.A_transform(image=image, bboxes=[bbox], category_ids=[1])
                 image = transformed["image"]
                 dice = np.random.rand()
-                if dice < Speed.config["CropAndPadding"]:
+                if dice < Speed.config["CropAndPad"]["p"]:
                     image = CropAndPad(image, bbox)
                 bbox = list(map(int, list(transformed["bboxes"][0])))
         
