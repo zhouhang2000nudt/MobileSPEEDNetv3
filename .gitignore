@@ -1,0 +1,13 @@
+__pycache__/
+result/
+
+test.py
+test.ipynb2
+
+pretrained/
+*.jpg
+
+tempCodeRunnerFile.py
+
+*.pyc
+*.pyo
