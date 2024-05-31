@@ -315,6 +315,8 @@ class Speed(Dataset):
                 ori = ori_wrapped
                 bbox = list(map(int, bbox_wrapped))
         
+        image = cv.cvtColor(image, cv.COLOR_GRAY2RGB)       # 转换为RGB格式
+        
         # 进行Albumentation增强
         if "self_supervised" in self.mode:
             # 空间变换
@@ -347,8 +349,7 @@ class Speed(Dataset):
             return image_1, image_2
         
         # 使用torchvision转换图片
-        image = self.transform(image)       # (1, 480, 768)
-        image = image.repeat(3, 1, 1)       # (3, 480, 768)
+        image = self.transform(image)       # (3, 480, 768)
         
         yaw_encode, pitch_encode, roll_encode = Speed.ori_encoder_decoder.encode_ori(ori)
         
@@ -414,7 +415,7 @@ class SpeedDataModule(L.LightningDataModule):
     def val_dataloader(self) -> MultiEpochsDataLoader:
         return MultiEpochsDataLoader(
             self.speed_data_val,
-            batch_size=self.config["batch_size"],
+            batch_size=self.config["batch_size"] * 2,
             shuffle=False,
             num_workers=self.config["workers"],
             persistent_workers=True
