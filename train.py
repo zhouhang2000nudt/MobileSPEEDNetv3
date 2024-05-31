@@ -18,6 +18,7 @@ from lightning.pytorch.callbacks import DeviceStatsMonitor, LearningRateMonitor
 from lightning.pytorch.loggers import CometLogger
 from lightning.pytorch.profilers import SimpleProfiler
 from lightning.pytorch.callbacks import StochasticWeightAveraging
+from lightning.pytorch import seed_everything
 
 
 
@@ -62,7 +63,7 @@ if __name__ == "__main__":
         os.makedirs(dirpath)
     
     # 设置随机种子
-    # seed_everything(config["seed"])
+    seed_everything(config["seed"])
 
 
     # ===================训练器===================
@@ -134,7 +135,7 @@ if __name__ == "__main__":
                       accumulate_grad_batches=config["accumulate_grad_batches"],
                       deterministic=config["deterministic"],
                       benchmark=config["benchmark"],
-                    #   profiler=profiler,
+                      profiler=profiler,
                       plugins=plugins,
                     #   precision=precision,
                       default_root_dir=dirpath,
