@@ -61,7 +61,7 @@ def quat2dcm(q):
     return dcm
 
 
-def project(q, r, K, scale):
+def project(q, r, camera):
 
         """ Projecting points to image frame to draw axes """
 
@@ -83,16 +83,15 @@ def project(q, r, K, scale):
         points_camera_frame = p_cam / p_cam[2]
 
         # projection to image plane
-        points_image_plane = K @ points_camera_frame
+        points_image_plane = camera.K @ points_camera_frame
         
-        S = np.array([[scale, 0, 0], [0, scale, 0], [0, 0, 1]])
-        points_image_plane = S @ points_image_plane
+        points_image_plane = camera.S @ points_image_plane
 
         x, y = (points_image_plane[0], points_image_plane[1])
         return x, y
 
 
-def visualize_axes(ax, q, r, K, scale):
+def visualize_axes(ax, q, r, camera):
 
         """ Visualizing image, with ground truth pose with axes projected to training image. """
 
@@ -100,14 +99,14 @@ def visualize_axes(ax, q, r, K, scale):
             ax = plt.gca()
 
         # no pose label for test
-        xa, ya = project(q, r, K, scale)
-        ax.arrow(xa[0], ya[0], xa[1] - xa[0], ya[1] - ya[0], head_width=20 * scale, color='r')
-        ax.arrow(xa[0], ya[0], xa[2] - xa[0], ya[2] - ya[0], head_width=20 * scale, color='g')
-        ax.arrow(xa[0], ya[0], xa[3] - xa[0], ya[3] - ya[0], head_width=20 * scale, color='b')
+        xa, ya = project(q, r, camera)
+        ax.arrow(xa[0], ya[0], xa[1] - xa[0], ya[1] - ya[0], head_width=20 * camera.S[0, 0], color='r')
+        ax.arrow(xa[0], ya[0], xa[2] - xa[0], ya[2] - ya[0], head_width=20 * camera.S[0, 0], color='g')
+        ax.arrow(xa[0], ya[0], xa[3] - xa[0], ya[3] - ya[0], head_width=20 * camera.S[0, 0], color='b')
 
         return
 
-def visualize(image, bboxes, category_ids, category_id_to_name, ori, pos, K, scale):
+def visualize(image, bboxes, category_ids, category_id_to_name, ori, pos, camera):
     bboxes[0][0] = int(bboxes[0][0])
     bboxes[0][1] = int(bboxes[0][1])
     bboxes[0][2] = int(bboxes[0][2])
@@ -119,6 +118,6 @@ def visualize(image, bboxes, category_ids, category_id_to_name, ori, pos, K, sca
     fig, ax = plt.subplots(1, 1, figsize=(12, 8))
     ax.set_xticks([])
     ax.set_yticks([])
-    visualize_axes(ax, np.array(ori), np.array(pos), K, scale)
+    visualize_axes(ax, np.array(ori), np.array(pos), camera)
     ax.imshow(img, cmap='gray')
     plt.show()

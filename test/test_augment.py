@@ -32,4 +32,4 @@ print("ori", ori)
 print("pos", pos)
 print("bbox", bbox)
 
-visualize(image, [bbox], category_ids, category_id_to_name, ori, pos, camera.K, scale=image.shape[0]/1200)
+visualize(image, [bbox], category_ids, category_id_to_name, ori, pos, camera)
