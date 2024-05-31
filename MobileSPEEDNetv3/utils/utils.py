@@ -25,6 +25,8 @@ class Camera:
         self.K_inv = np.linalg.inv(self.K)
         self.S = np.array([[config["imgsz"][1] / self.width, 0, 0], [0, config["imgsz"][0] / self.height, 0], [0, 0, 1]])
         self.S_inv = np.linalg.inv(self.S)
+        self.SK = self.S @ self.K
+        self.SK_inv = np.linalg.inv(self.SK)
 
 
 def wrap_boxes(boxes, M, width, height):
@@ -117,7 +119,7 @@ def rotate_image(image, pos, ori, camera, rot_max_magnitude):
     
 
     # Construct warping (perspective) matrix
-    warp_matrix = camera.S @ camera.K @ r_change @ camera.K_inv @ camera.S_inv
+    warp_matrix = camera.SK @ r_change @ camera.SK_inv
 
     height, width = np.shape(image)[:2]
 
@@ -147,7 +149,7 @@ def rotate_cam(image, pos, ori, camera, rot_max_magnitude):
     
 
     # Construct warping (perspective) matrix
-    warp_matrix = camera.S @ camera.K @ r_change @ camera.K_inv @ camera.S_inv
+    warp_matrix = camera.SK @ r_change @ camera.SK_inv
 
     height, width = np.shape(image)[:2]
 
