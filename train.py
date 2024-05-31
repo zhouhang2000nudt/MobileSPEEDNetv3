@@ -5,9 +5,9 @@ os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 import torch
 import argparse
 
-from MobileSPEEDv3.utils.config import get_config
-from MobileSPEEDv3.utils.dataset import SpeedDataModule
-from MobileSPEEDv3.module.Lightning_MobileSPEEDv3 import LightningMobileSPEEDv3
+from MobileSPEEDNetv3.utils.config import get_config
+from MobileSPEEDNetv3.utils.dataset import SpeedDataModule
+from MobileSPEEDNetv3.module.Lightning_MobileSPEEDv3 import LightningMobileSPEEDv3
 
 from lightning.pytorch import Trainer
 from lightning.pytorch.callbacks import LearningRateMonitor
@@ -30,9 +30,10 @@ if __name__ == "__main__":
     
     parser.add_argument("--backbone", type=str, default=config["backbone"], help="backbone")
     parser.add_argument("--stride", type=int, default=config["stride"], help="stride")
-    parser.add_argument("--sigma", type=int, default=config["sigma"], help="sigma")
-    parser.add_argument("--tau", type=float, default=config["tau"], help="tau")
+    parser.add_argument("--neighbor", type=int, default=config["neighbor"], help="neighbor")
+    parser.add_argument("--ratio", type=float, default=config["ratio"], help="ratio")
     parser.add_argument("--img_angle", type=float, default=config["Rotate"]["img_angle"], help="img_angle")
+    parser.add_argument("--cam_angle", type=float, default=config["Rotate"]["cam_angle"], help="cam_angle")
     parser.add_argument("--Rotatep", type=float, default=config["Rotate"]["p"], help="Rotatep")
     parser.add_argument("--CropAndPadp", type=float, default=config["CropAndPad"]["p"], help="CropAndPadp")
     parser.add_argument("--DropBlockSafep", type=float, default=config["DropBlockSafe"]["p"], help="DropBlockp")
@@ -42,15 +43,16 @@ if __name__ == "__main__":
     
     config["backbone"] = args.backbone
     config["stride"] = args.stride
-    config["sigma"] = args.sigma
-    config["tau"] = args.tau
+    config["neighbor"] = args.neighbor
+    config["ratio"] = args.ratio
     config["Rotate"]["img_angle"] = args.img_angle
+    config["Rotate"]["cam_angle"] = args.cam_angle
     config["Rotate"]["p"] = args.Rotatep
     config["CropAndPad"]["p"] = args.CropAndPadp
     config["DropBlockSafe"]["p"] = args.DropBlockSafep
     config["Augmentation"]["p"] = args.Augmentationp
     
-    config["name"] = f"{config['backbone']}-{config['stride']}_{config['tau']}_{config['sigma']}-{config['Rotate']['img_angle']}_{config['Rotate']['p']}-{config['CropAndPad']['p']}-{config['DropBlockSafe']['p']}-{config['Augmentation']['p']}"
+    config["name"] = f"{config['backbone']}-{config['stride']}_{config['neighbor']}_{config['ratio']}-{config['Rotate']['img_angle']}_{config['Rotate']['cam_angle']}_{config['Rotate']['p']}-{config['CropAndPad']['p']}-{config['DropBlockSafe']['p']}-{config['Augmentation']['p']}"
     
     torch.set_float32_matmul_precision("high")
     
