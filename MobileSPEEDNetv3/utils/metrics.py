@@ -60,7 +60,7 @@ class OriError(Metric):
         ori_inner_dot = torch.clamp(ori_inner_dot, max=1)
         ori_error = 2 * torch.arccos(ori_inner_dot)
         ori_error = torch.rad2deg(ori_error)
-        self.ori_error += torch.sum(ori_error)
+        self.ori_error += torch.sum(ori_error[ori_error > 0.1532])
         self.num += ori_label.shape[0]
     
     def compute(self) -> Tensor:
