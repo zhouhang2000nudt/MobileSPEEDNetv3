@@ -20,7 +20,7 @@ class LightningMobileSPEEDv3(L.LightningModule):
         # 模型
         self.model: Mobile_SPEEDv3 = Mobile_SPEEDv3(self.config)
         # 欧拉角编码解码器
-        self.ori_encoder_decoder: OriEncoderDecoder = OriEncoderDecoder(self.config["stride"], self.config["alpha"], neighbour=self.config["neighbour"])
+        self.ori_encoder_decoder: OriEncoderDecoder = OriEncoderDecoder(self.config["stride"], self.config["ratio"], neighbor=self.config["neighbor"])
         # 损失函数
         self.pos_loss: PoseLoss = PoseLoss(self.config["pos_loss"])
         self.yaw_loss: EulerLoss = EulerLoss(self.config["euler_loss"])

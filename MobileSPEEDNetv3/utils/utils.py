@@ -4,21 +4,8 @@ Utility functions
 """
 
 import torch
-import os
-import math
-import random
 import numpy as np
-import scipy
-import skimage.color
-import skimage.io
-import skimage.transform
-import urllib.request
-import shutil
-import warnings
-import random
-import itertools
 import cv2
-from scipy import stats
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
 from torch import Tensor
@@ -172,20 +159,20 @@ def rotate_cam(image, pos, ori, camera_k, rot_max_magnitude):
 
 
 class OriEncoderDecoder:
-    def __init__(self, stride: int, alpha: float, neighbour: int = 0):
+    def __init__(self, stride: int, ratio: float, neighbor: int = 0):
         assert 360 % stride == 0 and 180 % stride == 0, "stride must be a divisor of 360 and 180"
-        assert neighbour >= 0, "neighbour must be greater than or equal to 0"
-        assert alpha < 0.6666666666666666, "alpha must be less than 2/3"
+        assert neighbor >= 0, "neighbor must be greater than or equal to 0"
+        assert ratio < 0.6666666666666666, "ratio must be less than 2/3"
 
         self.stride = stride
-        self.alpha = alpha
-        self.neighbour = neighbour
-        self.yaw_len = int(360 // stride + 1 + 2 * neighbour)
-        self.pitch_len = int(180 // stride + 1 + 2 * neighbour)
-        self.roll_len = int(360 // stride + 1 + 2 * neighbour)
-        self.yaw_range = np.linspace(-neighbour * stride, 360 + neighbour * stride, self.yaw_len) - 180
-        self.pitch_range = np.linspace(-neighbour * stride, 180 + neighbour * stride, self.pitch_len) - 90
-        self.roll_range = np.linspace(-neighbour * stride, 360 + neighbour * stride, self.roll_len) - 180
+        self.ratio = ratio
+        self.neighbor = neighbor
+        self.yaw_len = int(360 // stride + 1 + 2 * neighbor)
+        self.pitch_len = int(180 // stride + 1 + 2 * neighbor)
+        self.roll_len = int(360 // stride + 1 + 2 * neighbor)
+        self.yaw_range = np.linspace(-neighbor * stride, 360 + neighbor * stride, self.yaw_len) - 180
+        self.pitch_range = np.linspace(-neighbor * stride, 180 + neighbor * stride, self.pitch_len) - 90
+        self.roll_range = np.linspace(-neighbor * stride, 360 + neighbor * stride, self.roll_len) - 180
         self.yaw_index_dict = {int(yaw // stride): i for i, yaw in enumerate(self.yaw_range)}
         self.pitch_index_dict = {int(pitch // stride): i for i, pitch in enumerate(self.pitch_range)}
         self.roll_index_dict = {int(roll // stride): i for i, roll in enumerate(self.roll_range)}
@@ -199,21 +186,21 @@ class OriEncoderDecoder:
         r = int(np.ceil(mean))
         li = angle_index_dict[l]
         ri = angle_index_dict[r]
-        alpha = [self.alpha for _ in range(self.neighbour)]
+        ratio = [self.ratio for _ in range(self.neighbor)]
         if l == r:
             encode[li] = 1
-            alpha[0] /= 2
+            ratio[0] /= 2
         else:
             encode[li] = r - mean
             encode[ri] = mean - l
         d = r - l
-        for i in range(self.neighbour):
-            pl_out = encode[li] * alpha[i]
-            pr_out = encode[ri] * alpha[i]
+        for i in range(self.neighbor):
+            pl_out = encode[li] * ratio[i]
+            pr_out = encode[ri] * ratio[i]
             encode[li] -= pl_out
             encode[ri] -= pr_out
             p_out = pl_out + pr_out
-            # neighbour
+            # neighbor
             li -= 1
             ri += 1
             l -= 1

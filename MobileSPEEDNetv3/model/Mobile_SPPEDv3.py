@@ -42,9 +42,9 @@ class Mobile_SPEEDv3(nn.Module):
                                      expand_ratio=config["expand_ratio"],
                                      pool_size=config["pool_size"],
                                      pos_dim=config["pos_dim"],
-                                     yaw_dim=int(360 // config["stride"] + 1 + 2 * config["neighbour"]),
-                                     pitch_dim=int(180 // config["stride"] + 1 + 2 * config["neighbour"]),
-                                     roll_dim=int(360 // config["stride"] + 1 + 2 * config["neighbour"]))
+                                     yaw_dim=int(360 // config["stride"] + 1 + 2 * config["neighbor"]),
+                                     pitch_dim=int(180 // config["stride"] + 1 + 2 * config["neighbor"]),
+                                     roll_dim=int(360 // config["stride"] + 1 + 2 * config["neighbor"]))
         
     def forward(self, x: Tensor):
         p3 = self.features[:7](x)
