@@ -19,7 +19,6 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.callbacks import DeviceStatsMonitor, LearningRateMonitor
 from lightning.pytorch.loggers import CometLogger
 from lightning.pytorch.profilers import SimpleProfiler
-from lightning.pytorch.callbacks import StochasticWeightAveraging
 from lightning.pytorch import seed_everything
 
 
@@ -94,8 +93,7 @@ if __name__ == "__main__":
         summary = RichModelSummary(max_depth=3)
     elif config["summary"] == "default":
         summary = ModelSummary(max_depth=3)
-    SWA = StochasticWeightAveraging(swa_lrs=config["lr_min"])
-    callbacks = [lr_monitor, checkpoint, summary, bar, SWA]
+    callbacks = [lr_monitor, checkpoint, summary, bar]
 
     # ===================plugins=================
     plugins = []
@@ -131,6 +129,7 @@ if __name__ == "__main__":
         config["workers"] = 2
         config["ram"] = False
         config["batch_size"] = 2
+        config["epoch"] = 2
         config["offline"] = True
     else:
         limit_train_batches, limit_val_batches = 1.0, 1.0
@@ -159,7 +158,7 @@ if __name__ == "__main__":
                       accumulate_grad_batches=config["accumulate_grad_batches"],
                       deterministic=config["deterministic"],
                       benchmark=config["benchmark"],
-                      profiler=profiler,
+                    #   profiler=profiler,
                       plugins=plugins,
                     #   precision=precision,
                       default_root_dir=dirpath,
