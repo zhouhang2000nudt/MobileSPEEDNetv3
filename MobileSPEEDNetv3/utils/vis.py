@@ -2,10 +2,9 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
-from .utils import Camera
-from spatialmath import SE3
 from spatialmath.base import q2r
 from scipy.spatial.transform import Rotation as R
+from matplotlib.pyplot import MultipleLocator
 
 BOX_COLOR = (255, 0, 0) # Red
 TEXT_COLOR = (0, 0, 0) # White
@@ -106,7 +105,7 @@ def visualize_axes(ax, q, r, camera):
 
         return
 
-def visualize(image, bboxes, category_ids, category_id_to_name, ori, pos, camera):
+def visualize_image(image, bboxes, category_ids, category_id_to_name, ori, pos, camera):
     bboxes[0][0] = int(bboxes[0][0])
     bboxes[0][1] = int(bboxes[0][1])
     bboxes[0][2] = int(bboxes[0][2])
@@ -120,4 +119,18 @@ def visualize(image, bboxes, category_ids, category_id_to_name, ori, pos, camera
     ax.set_yticks([])
     visualize_axes(ax, np.array(ori), np.array(pos), camera)
     ax.imshow(img, cmap='gray')
+    plt.show()
+
+def visualize_encode(euler_range, euler_encode, stride=1):
+    fig = plt.figure(figsize=(20, 8))
+    # 以range为横坐标，euler_encode为纵坐标，绘制柱形图
+    plt.bar(euler_range, euler_encode, width=stride)
+    # 设置横坐标的标签
+    plt.xticks(euler_range)
+    # x标签旋转45度
+    plt.xticks(rotation=45)
+    # 设置纵坐标范围为0-1
+    plt.ylim(0, 1)
+    plt.xlim(euler_range[0], euler_range[-1])
+    plt.tight_layout()
     plt.show()
