@@ -39,6 +39,7 @@ if __name__ == "__main__":
     parser.add_argument("--CropAndPadp", type=float, default=config["CropAndPad"]["p"], help="CropAndPadp")
     parser.add_argument("--DropBlockSafep", type=float, default=config["DropBlockSafe"]["p"], help="DropBlockp")
     parser.add_argument("--Augmentationp", type=float, default=config["Augmentation"]["p"], help="augmentp")
+    parser.add_argument("--debug", action="store_true", help="debug", default=config["debug"])
     
     args = parser.parse_args()
     
@@ -52,6 +53,7 @@ if __name__ == "__main__":
     config["CropAndPad"]["p"] = args.CropAndPadp
     config["DropBlockSafe"]["p"] = args.DropBlockSafep
     config["Augmentation"]["p"] = args.Augmentationp
+    config["debug"] = args.debug
     
     config["name"] = f"{config['backbone']}-{config['stride']}_{config['neighbor']}_{config['ratio']}-{config['Rotate']['img_angle']}_{config['Rotate']['cam_angle']}_{config['Rotate']['p']}-{config['CropAndPad']['p']}-{config['DropBlockSafe']['p']}-{config['Augmentation']['p']}"
     
@@ -91,7 +93,7 @@ if __name__ == "__main__":
     elif config["summary"] == "default":
         summary = ModelSummary(max_depth=3)
     SWA = StochasticWeightAveraging(swa_lrs=config["lr_min"])
-    callbacks = [lr_monitor, checkpoint, summary, bar]
+    callbacks = [lr_monitor, checkpoint, summary, bar, SWA]
 
     # ===================plugins=================
     plugins = []
@@ -124,6 +126,10 @@ if __name__ == "__main__":
     # ===================trainer=================
     if config["debug"]:
         limit_train_batches, limit_val_batches = config["limit_train_val"]
+        config["workers"] = 2
+        config["ram"] = False
+        config["batch_size"] = 2
+        config["offline"] = True
     else:
         limit_train_batches, limit_val_batches = 1.0, 1.0
     trainer = Trainer(accelerator=config["accelerator"],        # 加速器
