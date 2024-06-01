@@ -5,30 +5,30 @@ from torch import Tensor
 from functools import partial
 
 # 回归损失函数
-# @torch.jit.script
+@torch.compile
 def MAE_Loss(pre: Tensor, label: Tensor):
     return torch.mean(torch.sum(torch.abs(pre - label), dim=1))
 
-# @torch.jit.script
+@torch.compile
 def MSE_Loss(pre: Tensor, label: Tensor):
     return torch.mean(torch.sum((pre - label) ** 2, dim=1))
 
-# @torch.jit.script
+@torch.compile
 def Huber_Loss(pre: Tensor, label: Tensor, delta: float = 1.0):
     abs_err = torch.abs(pre - label)
     loss = torch.where(abs_err < delta, 0.5 * abs_err ** 2, delta * abs_err - 0.5 * delta**2)
     return torch.mean(torch.sum(loss, dim=1))
 
-# @torch.jit.script
+@torch.compile
 def Log_Cosh_Loss(pre: Tensor, label: Tensor):
     return torch.mean(torch.sum(torch.log(torch.cosh(pre - label)), dim=1))
 
 # 分类损失函数
-# @torch.jit.script
+@torch.compile
 def CrossEntropy_Loss(pre: Tensor, label: Tensor):
     return torch.mean(torch.sum(-label * torch.log(pre), dim=1))
 
-# @torch.jit.script
+@torch.compile
 def Focal_Loss(pre: Tensor, label: Tensor, gamma: float = 2.0, alpha: float = 0.25):
     eps = 1e-7
     CE = -label * torch.log(pre + eps)
