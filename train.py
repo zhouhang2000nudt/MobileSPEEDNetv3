@@ -1,6 +1,8 @@
 import comet_ml
 import time
 import os
+
+import torch.autograd.gradcheck
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 import torch
 import argparse
@@ -132,6 +134,22 @@ if __name__ == "__main__":
         config["offline"] = True
     else:
         limit_train_batches, limit_val_batches = 1.0, 1.0
+        torch.autograd.detect_anomaly(False)
+        torch.autograd.set_detect_anomaly(False)
+        torch.autograd.profiler.emit_nvtx(False)
+        torch.autograd.profiler.profile(False)
+        torch.autograd.gradcheck(check_backward_ad=False,
+                                 check_batched_forward_grad=False,
+                                 check_batched_grad=False,
+                                 check_forward_ad=False,
+                                 check_grad_dtypes=False,
+                                 check_undefined_grad=False)
+        torch.autograd.gradgradcheck(check_backward_ad=False,
+                                     check_batched_grad=False,
+                                     check_fwd_over_rev=False,
+                                     check_grad_dtypes=False,
+                                     check_rev_over_rev=False,
+                                     check_undefined_grad=False)
     trainer = Trainer(accelerator=config["accelerator"],        # 加速器
                       logger=comet_logger,
                       callbacks=callbacks,
