@@ -164,21 +164,55 @@ def rotate_cam(image, pos, ori, camera, rot_max_magnitude):
     return image_warped, pos_new, ori_new, warp_matrix
 
 
+def resize(image, pos, ori, box, camera, scale_max_magnitude):
+    image = np.array(image)
+    
+    alpha = 1 + (np.random.rand()-0.5) * 2 * scale_max_magnitude
+    
+    alpha = 0.5
+    
+    points_body = np.array([0, 0, 0, 1])
+    rotation = R.from_quat([ori[1], ori[2], ori[3], ori[0]])
+    pose_mat = np.hstack((rotation.as_matrix(), np.expand_dims(pos, 1)))
+    p_cam = pose_mat @ points_body
+    points_camera_frame = p_cam / p_cam[2]
+    points_image_plane = camera.K @ points_camera_frame
+    
+    resize_matrix = np.array([[alpha, 0, 0], [0, alpha, 0], [0, 0, 1]])
+    points_image_plane_resized = resize_matrix @ points_image_plane
+    trans_matrix = np.array([[1, 0, points_image_plane[0]-points_image_plane_resized[0]], [0, 1, points_image_plane[1]-points_image_plane_resized[1]], [0, 0, 1]])
+    warp_matrix = trans_matrix @ resize_matrix
+    
+    height, width = np.shape(image)[:2]
+    
+    image_warped = cv2.warpPerspective(image, warp_matrix, (width, height), cv2.WARP_INVERSE_MAP, flags=cv2.INTER_LINEAR)
+    
+    pos_new = pos / alpha
+    ori_new = ori
+    
+    return image_warped, pos_new, ori_new, warp_matrix
+
 class OriEncoderDecoder:
-    def __init__(self, stride: int, ratio: float, neighbor: int = 0):
+    def __init__(self, stride: int, alpha: float, neighbour: int = 0, device: str = 'cpu'):
         assert 360 % stride == 0 and 180 % stride == 0, "stride must be a divisor of 360 and 180"
-        assert neighbor >= 0, "neighbor must be greater than or equal to 0"
-        assert ratio < 0.6666666666666666, "ratio must be less than 2/3"
+        assert neighbour >= 0, "neighbour must be greater than or equal to 0"
+        assert alpha < 0.6666666666666666, "alpha must be less than 2/3"
 
         self.stride = stride
-        self.ratio = ratio
-        self.neighbor = neighbor
-        self.yaw_len = int(360 // stride + 1 + 2 * neighbor)
-        self.pitch_len = int(180 // stride + 1 + 2 * neighbor)
-        self.roll_len = int(360 // stride + 1 + 2 * neighbor)
-        self.yaw_range = np.linspace(-neighbor * stride, 360 + neighbor * stride, self.yaw_len) - 180
-        self.pitch_range = np.linspace(-neighbor * stride, 180 + neighbor * stride, self.pitch_len) - 90
-        self.roll_range = np.linspace(-neighbor * stride, 360 + neighbor * stride, self.roll_len) - 180
+        self.alpha = alpha
+        self.neighbour = neighbour
+        self.yaw_len = int(360 // stride + 1 + 2 * neighbour)
+        self.pitch_len = int(180 // stride + 1 + 2 * neighbour)
+        self.roll_len = int(360 // stride + 1 + 2 * neighbour)
+        self.yaw_range = torch.linspace(-neighbour * stride, 360 + neighbour * stride, self.yaw_len) - 180
+        self.pitch_range = torch.linspace(-neighbour * stride, 180 + neighbour * stride, self.pitch_len) - 90
+        self.roll_range = torch.linspace(-neighbour * stride, 360 + neighbour * stride, self.roll_len) - 180
+        self.yaw_range.requires_grad_(False)
+        self.pitch_range.requires_grad_(False)
+        self.roll_range.requires_grad_(False)
+        self.yaw_range = self.yaw_range.to(device)
+        self.pitch_range = self.pitch_range.to(device)
+        self.roll_range = self.roll_range.to(device)
         self.yaw_index_dict = {int(yaw // stride): i for i, yaw in enumerate(self.yaw_range)}
         self.pitch_index_dict = {int(pitch // stride): i for i, pitch in enumerate(self.pitch_range)}
         self.roll_index_dict = {int(roll // stride): i for i, roll in enumerate(self.roll_range)}
@@ -192,21 +226,21 @@ class OriEncoderDecoder:
         r = int(np.ceil(mean))
         li = angle_index_dict[l]
         ri = angle_index_dict[r]
-        ratio = [self.ratio for _ in range(self.neighbor)]
+        alpha = [self.alpha for _ in range(self.neighbour)]
         if l == r:
             encode[li] = 1
-            ratio[0] /= 2
+            alpha[0] /= 2
         else:
             encode[li] = r - mean
             encode[ri] = mean - l
         d = r - l
-        for i in range(self.neighbor):
-            pl_out = encode[li] * ratio[i]
-            pr_out = encode[ri] * ratio[i]
+        for i in range(self.neighbour):
+            pl_out = encode[li] * alpha[i]
+            pr_out = encode[ri] * alpha[i]
             encode[li] -= pl_out
             encode[ri] -= pr_out
             p_out = pl_out + pr_out
-            # neighbor
+            # neighbour
             li -= 1
             ri += 1
             l -= 1
@@ -237,12 +271,109 @@ class OriEncoderDecoder:
         return torch.tensor(ori)
 
     def decode_ori_batch(self, yaw_encode: Tensor, pitch_encode: Tensor, roll_encode: Tensor):
-        ori_decode = []
-        device = yaw_encode.device
-        yaw_encode = yaw_encode.cpu().numpy()
-        pitch_encode = pitch_encode.cpu().numpy()
-        roll_encode = roll_encode.cpu().numpy()
-        for b in range(yaw_encode.shape[0]):
-            ori_decode.append(self.decode_ori(yaw_encode[b], pitch_encode[b], roll_encode[b]))
         
-        return torch.stack(ori_decode, dim=0).to(device)
+        yaw_decode = torch.sum(yaw_encode * self.yaw_range, dim=1)
+        pitch_decode = torch.sum(pitch_encode * self.pitch_range, dim=1)
+        roll_decode = torch.sum(roll_encode * self.roll_range, dim=1)
+        
+        cy = torch.cos(torch.deg2rad(yaw_decode * 0.5))
+        sy = torch.sin(torch.deg2rad(yaw_decode * 0.5))
+        cp = torch.cos(torch.deg2rad(pitch_decode * 0.5))
+        sp = torch.sin(torch.deg2rad(pitch_decode * 0.5))
+        cr = torch.cos(torch.deg2rad(roll_decode * 0.5))
+        sr = torch.sin(torch.deg2rad(roll_decode * 0.5))
+        
+        q0 = cy * cp * cr + sy * sp * sr
+        q1 = cy * sp * cr + sy * cp * sr
+        q2 = sy * cp * cr - cy * sp * sr
+        q3 = -sy * sp * cr + cy * cp * sr
+        
+        return torch.stack([q0, q1, q2, q3], dim=1)
+    
+    
+class OriEncoderDecoderGauss:
+    def __init__(self, stride: float, s: float, tau: int = 5, device: str = 'cpu'):
+        assert 360 % stride == 0 and 180 % stride == 0, "stride must be a divisor of 360 and 180"
+
+        self.stride = stride
+        self.s = s
+        self.tau = tau
+        self.extra = max([self.tau * self.s, 5])
+        
+        self.yaw_len = int(360 / stride + 1 + 2 * self.extra)
+        self.pitch_len = int(180 / stride + 1 + 2 * self.extra)
+        self.roll_len = int(360 / stride + 1 + 2 * self.extra)
+        
+        self.yaw_range = torch.linspace(-self.extra * stride, 360 + self.extra * stride, self.yaw_len) - 180
+        self.pitch_range = torch.linspace(-self.extra * stride, 180 + self.extra * stride, self.pitch_len) - 90
+        self.roll_range = torch.linspace(-self.extra * stride, 360 + self.extra * stride, self.roll_len) - 180
+        
+        self.yaw_l = self.yaw_range[0].item()
+        self.pitch_l = self.pitch_range[0].item()
+        self.roll_l = self.roll_range[0].item()
+        
+        self.yaw_range.requires_grad_(False)
+        self.pitch_range.requires_grad_(False)
+        self.roll_range.requires_grad_(False)
+        self.yaw_range = self.yaw_range.to(device)
+        self.pitch_range = self.pitch_range.to(device)
+        self.roll_range = self.roll_range.to(device)
+        
+        # self.yaw_index_dict = {int(yaw // stride): i for i, yaw in enumerate(self.yaw_range)}
+        # self.pitch_index_dict = {int(pitch // stride): i for i, pitch in enumerate(self.pitch_range)}
+        # self.roll_index_dict = {int(roll // stride): i for i, roll in enumerate(self.roll_range)}
+    
+    def rho_sc(self, x, s, c):
+        return np.exp(-(x - c)**2 / (2 * s**2))
+    
+    def _encode_ori(self, angle: float, angle_len: Tensor, angle_l: float):
+        encode = np.zeros(angle_len)
+        
+        c = (angle - angle_l) / self.stride
+        l_index = int(np.ceil(c - self.extra))
+        r_index = int(np.floor(c + self.extra))
+        indexes = np.arange(l_index, r_index + 1, 1)
+        
+        rho = self.rho_sc(indexes, self.s, c)
+        encode[l_index:r_index+1] = rho / rho.sum()
+
+        return encode
+
+    def encode_ori(self, ori):
+        rotation = R.from_quat([ori[1], ori[2], ori[3], ori[0]])
+        yaw, pitch, roll = rotation.as_euler('YXZ', degrees=True)    # 偏航角、俯仰角、翻滚角
+        
+        yaw_encode = self._encode_ori(yaw, self.yaw_len, self.yaw_l)
+        pitch_encode = self._encode_ori(pitch, self.pitch_len, self.pitch_l)
+        roll_encode = self._encode_ori(roll, self.roll_len, self.roll_l)
+        return yaw_encode, pitch_encode, roll_encode
+    
+    def decode_ori(self, yaw_encode: Tensor, pitch_encode: Tensor, roll_encode: Tensor):
+        yaw_decode = torch.sum(yaw_encode * self.yaw_range)
+        pitch_decode = torch.sum(pitch_encode * self.pitch_range)
+        roll_decode = torch.sum(roll_encode * self.roll_range)
+        
+        rotation = R.from_euler('YXZ', [yaw_decode, pitch_decode, roll_decode], degrees=True)
+        ori = rotation.as_quat()
+        ori = [ori[3], ori[0], ori[1], ori[2]]
+        return torch.tensor(ori)
+
+    def decode_ori_batch(self, yaw_encode: Tensor, pitch_encode: Tensor, roll_encode: Tensor):
+        
+        yaw_decode = torch.sum(yaw_encode * self.yaw_range, dim=1)
+        pitch_decode = torch.sum(pitch_encode * self.pitch_range, dim=1)
+        roll_decode = torch.sum(roll_encode * self.roll_range, dim=1)
+        
+        cy = torch.cos(torch.deg2rad(yaw_decode * 0.5))
+        sy = torch.sin(torch.deg2rad(yaw_decode * 0.5))
+        cp = torch.cos(torch.deg2rad(pitch_decode * 0.5))
+        sp = torch.sin(torch.deg2rad(pitch_decode * 0.5))
+        cr = torch.cos(torch.deg2rad(roll_decode * 0.5))
+        sr = torch.sin(torch.deg2rad(roll_decode * 0.5))
+        
+        q0 = cy * cp * cr + sy * sp * sr
+        q1 = cy * sp * cr + sy * cp * sr
+        q2 = sy * cp * cr - cy * sp * sr
+        q3 = -sy * sp * cr + cy * cp * sr
+        
+        return torch.stack([q0, q1, q2, q3], dim=1)
