@@ -119,7 +119,9 @@ def visualize_image(image, bboxes, category_ids, category_id_to_name, ori, pos, 
     ax.set_yticks([])
     visualize_axes(ax, np.array(ori), np.array(pos), camera)
     ax.imshow(img, cmap='gray')
-    plt.show()
+    # 保存图片
+    plt.savefig("test.png")
+    # plt.show()
 
 def visualize_encode(euler_range, euler_encode, stride=1):
     fig = plt.figure(figsize=(20, 8))
@@ -133,4 +135,5 @@ def visualize_encode(euler_range, euler_encode, stride=1):
     plt.ylim(0, 1)
     plt.xlim(euler_range[0], euler_range[-1])
     plt.tight_layout()
-    plt.show()
+    # plt.show()
+    plt.savefig("encode.png")
