@@ -206,7 +206,7 @@ class ImageReader(Thread):
         self.image_dir: Path = image_dir
         self.image_name: list = img_name
         self.img_dict: dict = {}
-        self.Resize = A.Compose([A.Resize(height=Speed.config["imgsz"][0], width=Speed.config["imgsz"][1], p=1.0, interpolation=cv.INTER_AREA)],
+        self.Resize = A.Compose([A.Resize(height=Speed.config["imgsz"][0], width=Speed.config["imgsz"][1], p=1.0, interpolation=cv.INTER_LINEAR)],
         p=1,
         bbox_params=A.BboxParams(format="pascal_voc", label_fields=["category_ids"]))
     
@@ -252,7 +252,7 @@ class Speed(Dataset):
         self.transform = Speed.transform[mode]["transform"]
         self.sample_index = Speed.train_index if "train" in mode else Speed.val_index if "val" in mode else Speed.test_index
         self.mode = mode
-        self.Resize = A.Compose([A.Resize(height=Speed.config["imgsz"][0], width=Speed.config["imgsz"][1], p=1.0, interpolation=cv.INTER_AREA)],
+        self.Resize = A.Compose([A.Resize(height=Speed.config["imgsz"][0], width=Speed.config["imgsz"][1], p=1.0, interpolation=cv.INTER_LINEAR)],
         p=1,
         bbox_params=A.BboxParams(format="pascal_voc", label_fields=["category_ids"]))
         
@@ -289,7 +289,7 @@ class Speed(Dataset):
             wrapped = False
             if Speed.config["Rotate"]["Rotate_img"] and dice <= Speed.config["Rotate"]["p"]:
                 while True:
-                    if wrapped_time > 10:
+                    if wrapped_time > 5:
                         wrapped = False
                         break
                     wrapped_time += 1
@@ -300,7 +300,7 @@ class Speed(Dataset):
                         break
             elif Speed.config["Rotate"]["Rotate_cam"] and dice > Speed.config["Rotate"]["p"]:
                 while True:
-                    if wrapped_time > 10:
+                    if wrapped_time > 5:
                         wrapped = False
                         break
                     wrapped_time += 1
