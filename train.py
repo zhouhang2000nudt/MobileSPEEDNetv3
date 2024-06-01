@@ -32,8 +32,9 @@ if __name__ == "__main__":
     
     parser.add_argument("--backbone", type=str, default=config["backbone"], help="backbone")
     parser.add_argument("--stride", type=int, default=config["stride"], help="stride")
-    parser.add_argument("--neighbor", type=int, default=config["neighbor"], help="neighbor")
-    parser.add_argument("--ratio", type=float, default=config["ratio"], help="ratio")
+    parser.add_argument("--encoder", type=str, default=config["encoder"], help="Linear/Guass")
+    parser.add_argument("--n", type=int, default=config["n"], help="neighbor/tau")
+    parser.add_argument("--s", type=float, default=config["s"], help="ratio/sigma")
     parser.add_argument("--img_angle", type=float, default=config["Rotate"]["img_angle"], help="img_angle")
     parser.add_argument("--cam_angle", type=float, default=config["Rotate"]["cam_angle"], help="cam_angle")
     parser.add_argument("--Rotatep", type=float, default=config["Rotate"]["p"], help="Rotatep")
@@ -46,8 +47,9 @@ if __name__ == "__main__":
     
     config["backbone"] = args.backbone
     config["stride"] = args.stride
-    config["neighbor"] = args.neighbor
-    config["ratio"] = args.ratio
+    config["encoder"] = args.encoder
+    config["n"] = args.n
+    config["s"] = args.s
     config["Rotate"]["img_angle"] = args.img_angle
     config["Rotate"]["cam_angle"] = args.cam_angle
     config["Rotate"]["p"] = args.Rotatep
@@ -56,7 +58,7 @@ if __name__ == "__main__":
     config["Augmentation"]["p"] = args.Augmentationp
     config["debug"] = args.debug
     
-    config["name"] = f"{config['backbone']}-{config['stride']}_{config['neighbor']}_{config['ratio']}-{config['Rotate']['img_angle']}_{config['Rotate']['cam_angle']}_{config['Rotate']['p']}-{config['CropAndPad']['p']}-{config['DropBlockSafe']['p']}-{config['Augmentation']['p']}"
+    config["name"] = f"{config['backbone']}-{config['encoder']}_{config['stride']}_{config['n']}_{config['s']}-{config['Rotate']['img_angle']}_{config['Rotate']['cam_angle']}_{config['Rotate']['p']}-{config['CropAndPad']['p']}-{config['DropBlockSafe']['p']}-{config['Augmentation']['p']}"
     
     torch.set_float32_matmul_precision("high")
     

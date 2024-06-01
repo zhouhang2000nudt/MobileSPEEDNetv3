@@ -7,7 +7,7 @@ from MobileSPEEDNetv3.utils.utils import OriEncoderDecoderGauss, OriEncoderDecod
 from MobileSPEEDNetv3.utils.vis import visualize_encode
 
 ori_encoder_decoder = OriEncoderDecoder(5, 0.1, 5)
-ori_encoder_decoder = OriEncoderDecoderGauss(5, 1)
+ori_encoder_decoder = OriEncoderDecoderGauss(5, 1, 5)
 
 ori = torch.tensor([-0.419541, -0.484436, -0.214179, 0.73718])
 yaw_encode, pitch_encode, roll_encode = ori_encoder_decoder.encode_ori(ori)

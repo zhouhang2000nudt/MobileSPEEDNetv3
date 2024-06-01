@@ -24,12 +24,16 @@ ram: true            # 是否使用内存加载数据
 imgsz: [480, 768]     # 图片大小 [480, 768]
 
 
+# =======================encoder-decoder===================
+encoder: Gauss                     # Linear/Gauss
+stride: 5                            # 步长 度
+n: 5                                # neighbor/tau
+s: 1                              # ratio/sigma
+
+
 # ==========================model==========================
 backbone: mobilenet_v3_large
 pos_dim: 3                             # 位置维度
-stride: 5                            # 步长 度
-neighbor: 3                             # 邻居
-ratio: 0.1                            # 平滑因子
 pretrained: true
 deform_layers: []
 neck: FPNPAN                            # FPNPAN/BiFPN/AFPN

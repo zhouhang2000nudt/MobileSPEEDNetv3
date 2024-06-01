@@ -4,7 +4,7 @@ from pathlib import Path
 from threading import Thread
 from tqdm import tqdm
 from numpy import ndarray
-from .utils import rotate_image, rotate_cam, Camera, wrap_boxes, bbox_in_image, OriEncoderDecoder
+from .utils import rotate_image, rotate_cam, Camera, wrap_boxes, bbox_in_image, OriEncoderDecoder, OriEncoderDecoderGauss
 from typing import List
 from queue import Queue
 
@@ -156,15 +156,15 @@ def prepare_Speed(config: dict):
             ]),
             "A_transform": A.Compose([
                 A.OneOf([
-                    A.AdvancedBlur(blur_limit=(3, 7),
+                    A.AdvancedBlur(blur_limit=(3, 5),
                                    rotate_limit=25,
                                    p=0.2),
-                    A.Blur(blur_limit=(3, 7), p=0.2),
-                    A.GaussNoise(var_limit=(5, 15),
-                                 p=0.2),
-                    A.GaussianBlur(blur_limit=(3, 7),
+                    A.Blur(blur_limit=(3, 5), p=0.2),
+                    A.GaussianBlur(blur_limit=(3, 5),
                                    p=0.2),
                     ], p=config["Augmentation"]["p"]),
+                A.GaussNoise(var_limit=(5, 15),
+                             p=config["Augmentation"]["p"]),
                 A.ColorJitter(brightness=0.3,
                               contrast=0.3,
                               saturation=0.3,
@@ -267,7 +267,10 @@ def prepare_Speed(config: dict):
         Speed.read_img()
     
     # 设置姿态编码解码器
-    Speed.ori_encoder_decoder = OriEncoderDecoder(Speed.config["stride"], Speed.config["ratio"], Speed.config["neighbor"])
+    if Speed.config["encoder"] == "Linear":
+        Speed.ori_encoder_decoder = OriEncoderDecoder(Speed.config["stride"], Speed.config["s"], Speed.config["n"])
+    elif Speed.config["encoder"] == "Gauss":
+        Speed.ori_encoder_decoder = OriEncoderDecoderGauss(Speed.config["stride"], Speed.config["s"], Speed.config["n"])
 
 
 class ImageReader(Thread):
@@ -315,7 +318,7 @@ class Speed(Dataset):
     test_index: list        # 测试集图片名列表
     img_dict: dict = {} # 图片字典
     camera: Camera
-    ori_encoder_decoder: OriEncoderDecoder
+    ori_encoder_decoder =  None
     
 
     def __init__(self, mode: str = "train"):
