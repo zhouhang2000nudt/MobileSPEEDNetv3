@@ -9,6 +9,7 @@ import cv2
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
 from torch import Tensor
+# import vpi
 
 class Camera:
     fwx = 0.0176  # focal length[m]
@@ -124,7 +125,12 @@ def rotate_image(image, pos, ori, camera, rot_max_magnitude):
     height, width = np.shape(image)[:2]
 
     image_warped = cv2.warpPerspective(image, warp_matrix, (width, height), cv2.WARP_INVERSE_MAP, flags=cv2.INTER_LINEAR)
-
+    # with vpi.Backend.CUDA:
+    #     image = vpi.asimage(image).convert(vpi.Format.NV12_ER)
+    #     image_warped = image.perspwarp(warp_matrix, size=(width, height), interp=vpi.Interp.LINEAR)
+    # with image_warped.rlock_cpu() as outData:
+    #     image_warped = outData[0]
+        
     # Update pose
     pos_new = np.array(r_change @ pos)
     ori_new = rotation * R.from_quat([ori[1], ori[2], ori[3], ori[0]])
@@ -154,6 +160,9 @@ def rotate_cam(image, pos, ori, camera, rot_max_magnitude):
     height, width = np.shape(image)[:2]
 
     image_warped = cv2.warpPerspective(image, warp_matrix, (width, height), cv2.WARP_INVERSE_MAP, flags=cv2.INTER_LINEAR)
+    # with vpi.Backend.CUDA:
+    #     image = vpi.asimage(image).convert(vpi.Format.NV12_ER)
+    #     image_warped = image.perspwarp(warp_matrix, size=(width, height), interp=vpi.Interp.LINEAR)
 
     # Update pose
     pos_new = np.array(r_change @ pos)
@@ -186,6 +195,9 @@ def resize(image, pos, ori, box, camera, scale_max_magnitude):
     height, width = np.shape(image)[:2]
     
     image_warped = cv2.warpPerspective(image, warp_matrix, (width, height), cv2.WARP_INVERSE_MAP, flags=cv2.INTER_LINEAR)
+    # with vpi.Backend.CUDA:
+    #     image = vpi.asimage(image).convert(vpi.Format.NV12_ER)
+    #     image_warped = image.perspwarp(warp_matrix, size=(width, height), interp=vpi.Interp.LINEAR)
     
     pos_new = pos / alpha
     ori_new = ori
