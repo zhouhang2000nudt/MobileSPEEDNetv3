@@ -137,18 +137,6 @@ if __name__ == "__main__":
         torch.autograd.set_detect_anomaly(False)
         torch.autograd.profiler.emit_nvtx(False)
         torch.autograd.profiler.profile(False)
-        torch.autograd.gradcheck(check_backward_ad=False,
-                                 check_batched_forward_grad=False,
-                                 check_batched_grad=False,
-                                 check_forward_ad=False,
-                                 check_grad_dtypes=False,
-                                 check_undefined_grad=False)
-        torch.autograd.gradgradcheck(check_backward_ad=False,
-                                     check_batched_grad=False,
-                                     check_fwd_over_rev=False,
-                                     check_grad_dtypes=False,
-                                     check_rev_over_rev=False,
-                                     check_undefined_grad=False)
     trainer = Trainer(accelerator=config["accelerator"],        # 加速器
                       logger=comet_logger,
                       callbacks=callbacks,
