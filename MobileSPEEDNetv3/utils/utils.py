@@ -193,20 +193,20 @@ def resize(image, pos, ori, box, camera, scale_max_magnitude):
     return image_warped, pos_new, ori_new, warp_matrix
 
 class OriEncoderDecoder:
-    def __init__(self, stride: int, alpha: float, neighbour: int = 0, device: str = 'cpu'):
+    def __init__(self, stride: int, alpha: float, neighbor: int = 0, device: str = 'cpu'):
         assert 360 % stride == 0 and 180 % stride == 0, "stride must be a divisor of 360 and 180"
-        assert neighbour >= 0, "neighbour must be greater than or equal to 0"
+        assert neighbor >= 0, "neighbor must be greater than or equal to 0"
         assert alpha < 0.6666666666666666, "alpha must be less than 2/3"
 
         self.stride = stride
         self.alpha = alpha
-        self.neighbour = neighbour
-        self.yaw_len = int(360 // stride + 1 + 2 * neighbour)
-        self.pitch_len = int(180 // stride + 1 + 2 * neighbour)
-        self.roll_len = int(360 // stride + 1 + 2 * neighbour)
-        self.yaw_range = torch.linspace(-neighbour * stride, 360 + neighbour * stride, self.yaw_len) - 180
-        self.pitch_range = torch.linspace(-neighbour * stride, 180 + neighbour * stride, self.pitch_len) - 90
-        self.roll_range = torch.linspace(-neighbour * stride, 360 + neighbour * stride, self.roll_len) - 180
+        self.neighbor = neighbor
+        self.yaw_len = int(360 // stride + 1 + 2 * neighbor)
+        self.pitch_len = int(180 // stride + 1 + 2 * neighbor)
+        self.roll_len = int(360 // stride + 1 + 2 * neighbor)
+        self.yaw_range = torch.linspace(-neighbor * stride, 360 + neighbor * stride, self.yaw_len) - 180
+        self.pitch_range = torch.linspace(-neighbor * stride, 180 + neighbor * stride, self.pitch_len) - 90
+        self.roll_range = torch.linspace(-neighbor * stride, 360 + neighbor * stride, self.roll_len) - 180
         self.yaw_range.requires_grad_(False)
         self.pitch_range.requires_grad_(False)
         self.roll_range.requires_grad_(False)
@@ -226,7 +226,7 @@ class OriEncoderDecoder:
         r = int(np.ceil(mean))
         li = angle_index_dict[l]
         ri = angle_index_dict[r]
-        alpha = [self.alpha for _ in range(self.neighbour)]
+        alpha = [self.alpha for _ in range(self.neighbor)]
         if l == r:
             encode[li] = 1
             alpha[0] /= 2
@@ -234,13 +234,13 @@ class OriEncoderDecoder:
             encode[li] = r - mean
             encode[ri] = mean - l
         d = r - l
-        for i in range(self.neighbour):
+        for i in range(self.neighbor):
             pl_out = encode[li] * alpha[i]
             pr_out = encode[ri] * alpha[i]
             encode[li] -= pl_out
             encode[ri] -= pr_out
             p_out = pl_out + pr_out
-            # neighbour
+            # neighbor
             li -= 1
             ri += 1
             l -= 1
