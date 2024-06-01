@@ -6,6 +6,7 @@ from tqdm import tqdm
 from numpy import ndarray
 from .utils import rotate_image, rotate_cam, Camera, wrap_boxes, bbox_in_image, OriEncoderDecoder
 from typing import List
+from pl_bolts.datamodules.async_dataloader import AsynchronousLoader as AsyncDataLoader
 
 import albumentations as A
 import cv2 as cv
@@ -409,7 +410,8 @@ class SpeedDataModule(L.LightningDataModule):
             batch_size=self.config["batch_size"],
             shuffle=True,
             num_workers=self.config["workers"],
-            persistent_workers=True
+            persistent_workers=True,
+            pin_memory=True
         )
     
     def val_dataloader(self) -> MultiEpochsDataLoader:
@@ -418,7 +420,8 @@ class SpeedDataModule(L.LightningDataModule):
             batch_size=self.config["batch_size"] * 2,
             shuffle=False,
             num_workers=self.config["workers"],
-            persistent_workers=True
+            persistent_workers=True,
+            pin_memory=True
         )
 
 
