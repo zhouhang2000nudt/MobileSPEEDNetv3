@@ -20,7 +20,7 @@ class LightningMobileSPEEDv3(L.LightningModule):
         # 模型
         self.model: Mobile_SPEEDv3 = Mobile_SPEEDv3(self.config)
         # 欧拉角编码解码器
-        self.ori_encoder_decoder: OriEncoderDecoder = OriEncoderDecoder(self.config["stride"], self.config["ratio"], neighbor=self.config["neighbor"])
+        self.ori_encoder_decoder: OriEncoderDecoder = OriEncoderDecoder(self.config["stride"], self.config["ratio"], neighbor=self.config["neighbor"], device="cuda" if config["accelerator"] == "gpu" else config["accelerator"])
         # 损失函数
         self.pos_loss: PoseLoss = PoseLoss(self.config["pos_loss"])
         self.yaw_loss: EulerLoss = EulerLoss(self.config["euler_loss"])
@@ -222,7 +222,7 @@ class LightningMobileSPEEDv3(L.LightningModule):
             "lr_scheduler": lr_scheduler_config
         }
 
-@torch.jit.script
+# @torch.jit.script
 def get_box(box, stage):
     batch_index = torch.arange(0, box.shape[0]).unsqueeze(1).repeat(1, 4)
     bbox_index = torch.arange(4).repeat(box.shape[0], 1)
@@ -230,7 +230,7 @@ def get_box(box, stage):
     box = box[batch_index, bbox_index, stage_index]
     return box
 
-@torch.jit.script
+# @torch.jit.script
 def get_box_val(box, cfd):
     batch_index = torch.arange(0, box.shape[0]).unsqueeze(1).repeat(1, 4)
     bbox_index = torch.arange(4).repeat(box.shape[0], 1)
