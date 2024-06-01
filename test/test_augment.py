@@ -6,7 +6,8 @@ import numpy as np
 from MobileSPEEDNetv3.utils.utils import Camera
 from MobileSPEEDNetv3.utils.config import get_config
 from MobileSPEEDNetv3.utils.dataset import Speed, prepare_Speed
-from MobileSPEEDNetv3.utils.vis import visualize
+from MobileSPEEDNetv3.utils.vis import visualize_image
+from MobileSPEEDNetv3.utils.utils import resize, wrap_boxes
 from torchvision.transforms.v2 import ToPILImage
 
 
@@ -32,4 +33,9 @@ print("ori", ori)
 print("pos", pos)
 print("bbox", bbox)
 
-visualize(image, [bbox], category_ids, category_id_to_name, ori, pos, camera)
+image, pos, ori, warp_matrix = resize(image, pos, ori, bbox, camera, 0.5)
+bbox = wrap_boxes(np.array([bbox]), warp_matrix, height=image.shape[0], width=image.shape[1]).tolist()[0]
+print("ori", ori)
+print("pos", pos)
+print("bbox", bbox)
+visualize_image(image, [bbox], category_ids, category_id_to_name, ori, pos, camera)
