@@ -7,7 +7,7 @@ from MobileSPEEDNetv3.utils.utils import Camera
 from MobileSPEEDNetv3.utils.config import get_config
 from MobileSPEEDNetv3.utils.dataset import Speed, prepare_Speed
 from MobileSPEEDNetv3.utils.vis import visualize_image
-from MobileSPEEDNetv3.utils.utils import resize, wrap_boxes
+from MobileSPEEDNetv3.utils.utils import resize, warp_boxes
 from torchvision.transforms.v2 import ToPILImage
 
 
@@ -15,8 +15,8 @@ category_ids = [1]
 category_id_to_name = {1: 'satellite'}
 
 config = get_config()
-camera = Camera(config)
 config["ram"] = False
+config["resize_first"] = False
 prepare_Speed(config)
 speed = Speed("train")
 for i in range(len(speed)):
@@ -33,8 +33,10 @@ print("ori", ori)
 print("pos", pos)
 print("bbox", bbox)
 
-image, pos, ori, warp_matrix = resize(image, pos, ori, bbox, camera, 0.5)
-bbox = wrap_boxes(np.array([bbox]), warp_matrix, height=image.shape[0], width=image.shape[1]).tolist()[0]
+config["resize_first"] = True
+camera = Camera(config)
+image, pos, ori, warp_matrix = resize(image, pos, ori, camera, 0.5)
+bbox = warp_boxes(np.array([bbox]), warp_matrix, height=image.shape[0], width=image.shape[1]).tolist()[0]
 print("ori", ori)
 print("pos", pos)
 print("bbox", bbox)
