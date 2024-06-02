@@ -90,5 +90,5 @@ CropAndPad:
   p: 0.5
 
 DropBlockSafe:
-  p: 0.2
+  p: 0.0
   drop_num: 5

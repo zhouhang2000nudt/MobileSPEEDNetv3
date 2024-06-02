@@ -34,6 +34,33 @@ def CropAndPad(img: np.array, bbox: List[float]):
     img = cv.copyMakeBorder(img, 0, 0, 0, width-crop_x_max-1, cv.BORDER_REPLICATE)
     return img
 
+def DropBlockSafe(img: np.array, bbox: List[float], drop_num_lim: int):
+    # 随机丢弃部分图片中的一些块
+    # 丢弃块不覆盖bbox
+    
+    assert drop_num_lim > 0, "drop_num_lim must be greater than 0" 
+    
+    x_min, y_min, x_max, y_max = bbox
+    height, width = img.shape[:2]
+    drop_num = np.random.randint(1, drop_num_lim+1)
+    area_dict = {
+        0: [0, 0, x_min-1, height-1],
+        1: [0, 0, width-1, y_min-1],
+        2: [x_max+1, 0, width-1, height-1],
+        3: [0, y_max+1, width-1, height-1]
+    }
+    for i in range(drop_num):
+        area = np.random.randint(0, 4)
+        area_x_min, area_y_min, area_x_max, area_y_max = area_dict[area]
+        try:
+            drop_x_min = np.random.randint(area_x_min, area_x_max+1)
+            drop_y_min = np.random.randint(area_y_min, area_y_max+1)
+            drop_x_max = np.random.randint(drop_x_min, area_x_max+1)
+            drop_y_max = np.random.randint(drop_y_min, area_y_max+1)
+            img[drop_y_min:drop_y_max+1, drop_x_min:drop_x_max+1, :] = np.random.randint(100, 200)
+        except:
+            pass
+    return img
 
 class CudaDataLoader:
     """ 异步预先将数据从 CPU 加载到 GPU 中 """
@@ -426,11 +453,14 @@ class Speed(Dataset):
             image_2 = CropAndPad(image_2, bbox_2)
         else:
             if self.A_transform is not None:
-                transformed = self.A_transform(image=image, bboxes=[bbox], category_ids=[1])
-                image = transformed["image"]
                 dice = np.random.rand()
                 if dice < Speed.config["CropAndPad"]["p"]:
                     image = CropAndPad(image, bbox)
+                dice = np.random.rand()
+                if dice < Speed.config["DropBlockSafe"]:
+                    image = DropBlockSafe(image, bbox, Speed.config["DropBlockSafe"]["p"])
+                transformed = self.A_transform(image=image, bboxes=[bbox], category_ids=[1])
+                image = transformed["image"]
                 bbox = list(map(int, list(transformed["bboxes"][0])))
         
         if "self_supervised" in self.mode:
