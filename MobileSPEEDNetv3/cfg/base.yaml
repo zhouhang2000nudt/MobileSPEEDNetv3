@@ -84,7 +84,7 @@ Rotate:
 
 Resize:
   ratio: 0.5
-  p: 0.5
+  p: 0.0
 
 CropAndPad:
   p: 0.5
