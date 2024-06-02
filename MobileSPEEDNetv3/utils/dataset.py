@@ -424,7 +424,7 @@ class Speed(Dataset):
         dice = np.random.rand()
         if "train" in self.mode or "self_supervised" in self.mode:
             if dice < Speed.config["Resize"]["p"]:
-                if 10 < pos[-1] / Speed.config["Resize"]["ratio"] < 40:
+                if 10 < pos[-1] / (1 + Speed.config["Resize"]["ratio"]) and pos[-1] / (1 - Speed.config["Resize"]["ratio"]) < 35:
                     image_warpped, pos_warpped, ori_warpped, M_warpped = resize(image, pos, ori, Speed.camera, Speed.config["Resize"]["ratio"])
                     bbox_warpped = warp_boxes(np.array([bbox]), M_warpped, height=image.shape[0], width=image.shape[1]).tolist()[0]
                     warpped = True
