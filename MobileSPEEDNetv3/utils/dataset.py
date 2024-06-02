@@ -186,16 +186,16 @@ def prepare_Speed(config: dict):
                     A.AdvancedBlur(blur_limit=(3, 5),
                                    rotate_limit=25,
                                    p=0.2),
+                    A.GaussNoise(var_limit=(5, 15),
+                                   p=0.2),
                     A.Blur(blur_limit=(3, 5), p=0.2),
                     A.GaussianBlur(blur_limit=(3, 5),
                                    p=0.2),
                     ], p=config["Augmentation"]["p"]),
-                A.GaussNoise(var_limit=(5, 15),
-                             p=config["Augmentation"]["p"]),
-                A.ColorJitter(brightness=0.3,
-                              contrast=0.3,
-                              saturation=0.3,
-                              hue=0.3,
+                A.ColorJitter(brightness=0.2,
+                              contrast=0.2,
+                              saturation=0.2,
+                              hue=0.2,
                               p=config["Augmentation"]["p"]),
             ],
             p=1,
@@ -424,9 +424,10 @@ class Speed(Dataset):
         dice = np.random.rand()
         if "train" in self.mode or "self_supervised" in self.mode:
             if dice < Speed.config["Resize"]["p"]:
-                image_warpped, pos_warpped, ori_warpped, M_warpped = resize(image, pos, ori, Speed.camera, Speed.config["Resize"]["ratio"])
-                bbox_warpped = warp_boxes(np.array([bbox]), M_warpped, height=image.shape[0], width=image.shape[1]).tolist()[0]
-                warpped = True
+                if 10 < pos[-1] / Speed.config["Resize"]["ratio"] < 40:
+                    image_warpped, pos_warpped, ori_warpped, M_warpped = resize(image, pos, ori, Speed.camera, Speed.config["Resize"]["ratio"])
+                    bbox_warpped = warp_boxes(np.array([bbox]), M_warpped, height=image.shape[0], width=image.shape[1]).tolist()[0]
+                    warpped = True
             if warpped:
                 image = image_warpped
                 pos = pos_warpped
@@ -453,15 +454,15 @@ class Speed(Dataset):
             image_2 = CropAndPad(image_2, bbox_2)
         else:
             if self.A_transform is not None:
+                transformed = self.A_transform(image=image, bboxes=[bbox], category_ids=[1])
+                image = transformed["image"]
+                bbox = list(map(int, list(transformed["bboxes"][0])))
                 dice = np.random.rand()
                 if dice < Speed.config["CropAndPad"]["p"]:
                     image = CropAndPad(image, bbox)
                 dice = np.random.rand()
                 if dice < Speed.config["DropBlockSafe"]["p"]:
                     image = DropBlockSafe(image, bbox, Speed.config["DropBlockSafe"]["p"])
-                transformed = self.A_transform(image=image, bboxes=[bbox], category_ids=[1])
-                image = transformed["image"]
-                bbox = list(map(int, list(transformed["bboxes"][0])))
         
         if "self_supervised" in self.mode:
             image_1 = self.transform(image_1)       # (1, 480, 768)
