@@ -38,10 +38,13 @@ if __name__ == "__main__":
     parser.add_argument("--img_angle", type=float, default=config["Rotate"]["img_angle"], help="img_angle")
     parser.add_argument("--cam_angle", type=float, default=config["Rotate"]["cam_angle"], help="cam_angle")
     parser.add_argument("--Rotatep", type=float, default=config["Rotate"]["p"], help="Rotatep")
+    parser.add_argument("--Resize_ratio", type=float, default=config["Resize"]["ratio"], help="Resize_ratio")
+    parser.add_argument("--Resizep", type=float, default=config["Resize"]["p"], help="Resizep")
     parser.add_argument("--CropAndPadp", type=float, default=config["CropAndPad"]["p"], help="CropAndPadp")
     parser.add_argument("--DropBlockSafep", type=float, default=config["DropBlockSafe"]["p"], help="DropBlockp")
     parser.add_argument("--Augmentationp", type=float, default=config["Augmentation"]["p"], help="augmentp")
     parser.add_argument("--debug", action="store_true", help="debug", default=config["debug"])
+    parser.add_argument("--resize_first", action="store_true", help="resize_first", default=config["resize_first"])
     
     args = parser.parse_args()
     
@@ -53,12 +56,15 @@ if __name__ == "__main__":
     config["Rotate"]["img_angle"] = args.img_angle
     config["Rotate"]["cam_angle"] = args.cam_angle
     config["Rotate"]["p"] = args.Rotatep
+    config["Resize"]["ratio"] = args.Resize_ratio
+    config["Resize"]["p"] = args.Resizep
     config["CropAndPad"]["p"] = args.CropAndPadp
     config["DropBlockSafe"]["p"] = args.DropBlockSafep
     config["Augmentation"]["p"] = args.Augmentationp
     config["debug"] = args.debug
+    config["resize_first"] = args.resize_first
     
-    config["name"] = f"{config['backbone']}-{config['encoder']}_{config['stride']}_{config['n']}_{config['s']}-{config['Rotate']['img_angle']}_{config['Rotate']['cam_angle']}_{config['Rotate']['p']}-{config['CropAndPad']['p']}-{config['DropBlockSafe']['p']}-{config['Augmentation']['p']}"
+    config["name"] = f"{config['backbone']}-{config['encoder']}_{config['stride']}_{config['n']}_{config['s']}-{config['Rotate']['img_angle']}_{config['Rotate']['cam_angle']}_{config['Rotate']['p']}-{config["Resize_ratio"]}_{config["Resizep"]}-{config['CropAndPad']['p']}-{config['DropBlockSafe']['p']}-{config['Augmentation']['p']}"
     
     torch.set_float32_matmul_precision("high")
     

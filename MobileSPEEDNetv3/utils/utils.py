@@ -24,13 +24,16 @@ class Camera:
     def __init__(self, config):
         self.K = np.array([[self.fx, 0, self.width / 2], [0, self.fy, self.height / 2], [0, 0, 1]])
         self.K_inv = np.linalg.inv(self.K)
-        self.S = np.array([[config["imgsz"][1] / self.width, 0, 0], [0, config["imgsz"][0] / self.height, 0], [0, 0, 1]])
+        if config["resize_first"]:
+            self.S = np.array([[config["imgsz"][1] / self.width, 0, 0], [0, config["imgsz"][0] / self.height, 0], [0, 0, 1]])
+        else:
+            self.S = np.eye(3)
         self.S_inv = np.linalg.inv(self.S)
         self.SK = self.S @ self.K
         self.SK_inv = np.linalg.inv(self.SK)
 
 
-def wrap_boxes(boxes, M, width, height):
+def warp_boxes(boxes, M, width, height):
     n = len(boxes)
     if n:
         # warp points
@@ -75,10 +78,10 @@ def wrap_boxes(boxes, M, width, height):
         return boxes
 
 
-def bbox_in_image(bbox_wrapped, bbox_area):
-    # 若bbox_wrapped的面积小于原来bbox面积的0.95，就认为bbox_wrapped不在图像内
-    bbox_wrapped_area = (bbox_wrapped[2] - bbox_wrapped[0]) * (bbox_wrapped[3] - bbox_wrapped[1])
-    return bbox_wrapped_area >= 0.95 * bbox_area
+def bbox_in_image(bbox_warpped, bbox_area):
+    # 若bbox_warpped的面积小于原来bbox面积的0.95，就认为bbox_warpped不在图像内
+    bbox_warpped_area = (bbox_warpped[2] - bbox_warpped[0]) * (bbox_warpped[3] - bbox_warpped[1])
+    return bbox_warpped_area >= 0.95 * bbox_area
 
 
 def clamp(bbox):
@@ -173,19 +176,17 @@ def rotate_cam(image, pos, ori, camera, rot_max_magnitude):
     return image_warped, pos_new, ori_new, warp_matrix
 
 
-def resize(image, pos, ori, box, camera, scale_max_magnitude):
+def resize(image, pos, ori, camera, scale_max_magnitude):
     image = np.array(image)
     
-    alpha = 1 + (np.random.rand()-0.5) * 2 * scale_max_magnitude
-    
-    alpha = 0.5
+    alpha = 1 + np.random.uniform(-scale_max_magnitude, scale_max_magnitude)
     
     points_body = np.array([0, 0, 0, 1])
     rotation = R.from_quat([ori[1], ori[2], ori[3], ori[0]])
     pose_mat = np.hstack((rotation.as_matrix(), np.expand_dims(pos, 1)))
     p_cam = pose_mat @ points_body
     points_camera_frame = p_cam / p_cam[2]
-    points_image_plane = camera.K @ points_camera_frame
+    points_image_plane = camera.SK @ points_camera_frame
     
     resize_matrix = np.array([[alpha, 0, 0], [0, alpha, 0], [0, 0, 1]])
     points_image_plane_resized = resize_matrix @ points_image_plane

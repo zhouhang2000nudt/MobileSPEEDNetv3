@@ -4,7 +4,7 @@ from pathlib import Path
 from threading import Thread
 from tqdm import tqdm
 from numpy import ndarray
-from .utils import rotate_image, rotate_cam, Camera, wrap_boxes, bbox_in_image, OriEncoderDecoder, OriEncoderDecoderGauss
+from .utils import rotate_image, rotate_cam, resize, Camera, warp_boxes, bbox_in_image, OriEncoderDecoder, OriEncoderDecoderGauss
 from typing import List
 from queue import Queue
 
@@ -280,9 +280,10 @@ class ImageReader(Thread):
         self.image_dir: Path = image_dir
         self.image_name: list = img_name
         self.img_dict: dict = {}
-        self.Resize = A.Compose([A.Resize(height=Speed.config["imgsz"][0], width=Speed.config["imgsz"][1], p=1.0, interpolation=cv.INTER_LINEAR)],
-        p=1,
-        bbox_params=A.BboxParams(format="pascal_voc", label_fields=["category_ids"]))
+        if self.config["resize_first"]:
+            self.Resize = A.Compose([A.Resize(height=Speed.config["imgsz"][0], width=Speed.config["imgsz"][1], p=1.0, interpolation=cv.INTER_LINEAR)],
+            p=1,
+            bbox_params=A.BboxParams(format="pascal_voc", label_fields=["category_ids"]))
     
     def run(self):
         for img_name in tqdm(self.image_name):
@@ -292,10 +293,10 @@ class ImageReader(Thread):
                 bbox[2] = 1919
             if bbox[3] >= 1200:
                 bbox[3] = 1199
-            
-            transformed = self.Resize(image=image, bboxes=[bbox], category_ids=[1])
-            image = transformed["image"]
-            bbox = list(map(int, list(transformed["bboxes"][0])))
+            if self.config["resize_first"]:
+                transformed = self.Resize(image=image, bboxes=[bbox], category_ids=[1])
+                image = transformed["image"]
+                bbox = list(map(int, list(transformed["bboxes"][0])))
             Speed.labels[img_name]["bbox"] = bbox
             self.img_dict[img_name] = image
     
@@ -329,6 +330,7 @@ class Speed(Dataset):
         self.Resize = A.Compose([A.Resize(height=Speed.config["imgsz"][0], width=Speed.config["imgsz"][1], p=1.0, interpolation=cv.INTER_LINEAR)],
         p=1,
         bbox_params=A.BboxParams(format="pascal_voc", label_fields=["category_ids"]))
+        self.last_resize = v2.Resize(Speed.config["imgsz"])
         
     
     def __len__(self):
@@ -336,7 +338,7 @@ class Speed(Dataset):
 
     def __getitem__(self, index) -> tuple:
         filename = self.sample_index[index].strip()                  # 图片文件名
-        # filename = "img000001.jpg"
+        filename = "img000001.jpg"
         if Speed.config["ram"]:
             image = Speed.img_dict[filename]
             bbox = self.labels[filename]["bbox"]
@@ -347,48 +349,63 @@ class Speed(Dataset):
                 bbox[2] = 1919
             if bbox[3] >= 1200:
                 bbox[3] = 1199
-            transformed = self.Resize(image=image, bboxes=[bbox], category_ids=[1], interpolation=cv.INTER_LINEAR)
-            image = transformed["image"]
-            bbox = list(map(int, list(transformed["bboxes"][0])))
+            if Speed.config["resize_first"]:
+                transformed = self.Resize(image=image, bboxes=[bbox], category_ids=[1], interpolation=cv.INTER_LINEAR)
+                image = transformed["image"]
+                bbox = list(map(int, list(transformed["bboxes"][0])))
             
         
         ori = np.array(self.labels[filename]["ori"])   # 姿态
         pos = np.array(self.labels[filename]["pos"])   # 位置
         
-        # 先进行wrapping
+        # 先进行warpping
         dice = np.random.rand()
         if ("train" in self.mode or "self_supervised" in self.mode) and (Speed.config["Rotate"]["Rotate_img"] or Speed.config["Rotate"]["Rotate_cam"]):
-            wrapped_time = 0
+            warpped_time = 0
             bbox_area = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
-            wrapped = False
+            warpped = False
             if Speed.config["Rotate"]["Rotate_img"] and dice <= Speed.config["Rotate"]["p"]:
                 while True:
-                    if wrapped_time > 5:
-                        wrapped = False
+                    if warpped_time > 5:
+                        warpped = False
                         break
-                    wrapped_time += 1
-                    image_wrapped, pos_wrapped, ori_wrapped, M_wrapped = rotate_image(image, pos, ori, Speed.camera, Speed.config["Rotate"]["img_angle"])
-                    bbox_wrapped = wrap_boxes(np.array([bbox]), M_wrapped, height=image.shape[0], width=image.shape[1]).tolist()[0]
-                    if bbox_in_image(bbox_wrapped, bbox_area):
-                        wrapped = True
+                    warpped_time += 1
+                    image_warpped, pos_warpped, ori_warpped, M_warpped = rotate_image(image, pos, ori, Speed.camera, Speed.config["Rotate"]["img_angle"])
+                    bbox_warpped = warp_boxes(np.array([bbox]), M_warpped, height=image.shape[0], width=image.shape[1]).tolist()[0]
+                    if bbox_in_image(bbox_warpped, bbox_area):
+                        warpped = True
                         break
             elif Speed.config["Rotate"]["Rotate_cam"] and dice > Speed.config["Rotate"]["p"]:
                 while True:
-                    if wrapped_time > 5:
-                        wrapped = False
+                    if warpped_time > 5:
+                        warpped = False
                         break
-                    wrapped_time += 1
-                    image_wrapped, pos_wrapped, ori_wrapped, M_wrapped = rotate_cam(image, pos, ori, Speed.camera, Speed.config["Rotate"]["cam_angle"])
-                    bbox_wrapped = wrap_boxes(np.array([bbox]), M_wrapped, height=image.shape[0], width=image.shape[1]).tolist()[0]
-                    if bbox_in_image(bbox_wrapped, bbox_area):
-                        wrapped = True
+                    warpped_time += 1
+                    image_warpped, pos_warpped, ori_warpped, M_warpped = rotate_cam(image, pos, ori, Speed.camera, Speed.config["Rotate"]["cam_angle"])
+                    bbox_warpped = warp_boxes(np.array([bbox]), M_warpped, height=image.shape[0], width=image.shape[1]).tolist()[0]
+                    if bbox_in_image(bbox_warpped, bbox_area):
+                        warpped = True
                         break
             
-            if wrapped:
-                image = image_wrapped
-                pos = pos_wrapped
-                ori = ori_wrapped
-                bbox = list(map(int, bbox_wrapped))
+            if warpped:
+                image = image_warpped
+                pos = pos_warpped
+                ori = ori_warpped
+                bbox = list(map(int, bbox_warpped))
+        
+        # 进行resize
+        dice = np.random.rand()
+        if "train" in self.mode or "self_supervised" in self.mode:
+            if dice < Speed.config["Resize"]["p"]:
+                image_warpped, pos_warpped, ori_warpped, M_warpped = resize(image, pos, ori, Speed.camera, Speed.config["Resize"]["ratio"])
+                bbox_warpped = warp_boxes(np.array([bbox]), M_warpped, height=image.shape[0], width=image.shape[1]).tolist()[0]
+                warpped = True
+            if warpped:
+                image = image_warpped
+                pos = pos_warpped
+                ori = ori_warpped
+                bbox = list(map(int, bbox_warpped))
+
         
         image = cv.cvtColor(image, cv.COLOR_GRAY2RGB)       # 转换为RGB格式
         
@@ -424,6 +441,10 @@ class Speed(Dataset):
             return image_1, image_2
         
         # 使用torchvision转换图片
+        if not Speed.config["resize_first"]:
+            transformed = self.Resize(image=image, bboxes=[bbox], category_ids=[1], interpolation=cv.INTER_LINEAR)
+            image = transformed["image"]
+            bbox = list(map(int, list(transformed["bboxes"][0])))
         image = self.transform(image)       # (3, 480, 768)
         
         yaw_encode, pitch_encode, roll_encode = Speed.ori_encoder_decoder.encode_ori(ori)
