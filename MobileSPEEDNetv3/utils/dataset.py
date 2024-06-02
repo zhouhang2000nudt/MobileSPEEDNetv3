@@ -457,7 +457,7 @@ class Speed(Dataset):
                 if dice < Speed.config["CropAndPad"]["p"]:
                     image = CropAndPad(image, bbox)
                 dice = np.random.rand()
-                if dice < Speed.config["DropBlockSafe"]:
+                if dice < Speed.config["DropBlockSafe"]["p"]:
                     image = DropBlockSafe(image, bbox, Speed.config["DropBlockSafe"]["p"])
                 transformed = self.A_transform(image=image, bboxes=[bbox], category_ids=[1])
                 image = transformed["image"]

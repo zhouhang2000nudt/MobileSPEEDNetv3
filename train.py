@@ -64,7 +64,7 @@ if __name__ == "__main__":
     config["debug"] = args.debug
     config["resize_first"] = args.resize_first
     
-    config["name"] = f"{config['backbone']}-{config['encoder']}_{config['stride']}_{config['n']}_{config['s']}-{config['Rotate']['img_angle']}_{config['Rotate']['cam_angle']}_{config['Rotate']['p']}-{config["Resize_ratio"]}_{config["Resizep"]}-{config['CropAndPad']['p']}-{config['DropBlockSafe']['p']}-{config['Augmentation']['p']}"
+    config["name"] = f"{config['backbone']}-{config['encoder']}_{config['stride']}_{config['n']}_{config['s']}-{config['Rotate']['img_angle']}_{config['Rotate']['cam_angle']}_{config['Rotate']['p']}-{config['Resize']['ratio']}_{config['Resize']['p']}-{config['CropAndPad']['p']}-{config['DropBlockSafe']['p']}-{config['Augmentation']['p']}"
     
     torch.set_float32_matmul_precision("high")
     
