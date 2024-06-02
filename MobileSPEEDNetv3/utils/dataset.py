@@ -365,7 +365,7 @@ class Speed(Dataset):
 
     def __getitem__(self, index) -> tuple:
         filename = self.sample_index[index].strip()                  # 图片文件名
-        filename = "img000001.jpg"
+        # filename = "img000001.jpg"
         if Speed.config["ram"]:
             image = Speed.img_dict[filename]
             bbox = self.labels[filename]["bbox"]
