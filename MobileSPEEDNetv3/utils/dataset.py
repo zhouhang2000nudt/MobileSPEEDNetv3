@@ -537,7 +537,9 @@ class SpeedDataModule(L.LightningDataModule):
             shuffle=True,
             num_workers=self.config["workers"],
             persistent_workers=True,
-            pin_memory=True
+            pin_memory=True,
+            pin_memory_device='cuda',
+            prefetch_factor=5
         )
         return CudaDataLoader(loader, 'cuda', queue_size=4)
     
@@ -548,7 +550,9 @@ class SpeedDataModule(L.LightningDataModule):
             shuffle=False,
             num_workers=self.config["workers"],
             persistent_workers=True,
-            pin_memory=True
+            pin_memory=True,
+            pin_memory_device='cuda',
+            prefetch_factor=5
         )
         return CudaDataLoader(loader, 'cuda', queue_size=4)
 
