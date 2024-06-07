@@ -26,10 +26,10 @@ resize_first: false    # 是否先resize
 
 
 # =======================encoder-decoder===================
-encoder: Gauss                     # Linear/Gauss
+encoder: Linear                     # Linear/Gauss
 stride: 5                            # 步长 度
-n: 5                                # neighbor/tau
-s: 1                              # ratio/sigma
+n: 3                                # neighbor/tau
+s: 0.1                              # ratio/sigma
 
 
 # ==========================model==========================
