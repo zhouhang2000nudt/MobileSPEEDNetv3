@@ -531,7 +531,17 @@ class SpeedDataModule(L.LightningDataModule):
             self.speed_data_val: Speed = Speed("val")
     
     def train_dataloader(self) -> MultiEpochsDataLoader:
-        loader = MultiEpochsDataLoader(
+        # loader = MultiEpochsDataLoader(
+        #     self.speed_data_train,
+        #     batch_size=self.config["batch_size"],
+        #     shuffle=True,
+        #     num_workers=self.config["workers"],
+        #     persistent_workers=True,
+        #     pin_memory=True,
+        #     pin_memory_device='cuda',
+        #     prefetch_factor=5
+        # )
+        loader = torch.utils.data.DataLoader(
             self.speed_data_train,
             batch_size=self.config["batch_size"],
             shuffle=True,
@@ -541,10 +551,21 @@ class SpeedDataModule(L.LightningDataModule):
             pin_memory_device='cuda',
             prefetch_factor=5
         )
-        return CudaDataLoader(loader, 'cuda', queue_size=10)
+        # return CudaDataLoader(loader, 'cuda', queue_size=10)
+        return loader
     
     def val_dataloader(self) -> MultiEpochsDataLoader:
-        loader = MultiEpochsDataLoader(
+        # loader = MultiEpochsDataLoader(
+        #     self.speed_data_val,
+        #     batch_size=self.config["batch_size"] * 2,
+        #     shuffle=False,
+        #     num_workers=self.config["workers"],
+        #     persistent_workers=True,
+        #     pin_memory=True,
+        #     pin_memory_device='cuda',
+        #     prefetch_factor=5
+        # )
+        loader = torch.utils.data.DataLoader(
             self.speed_data_val,
             batch_size=self.config["batch_size"] * 2,
             shuffle=False,
@@ -554,7 +575,8 @@ class SpeedDataModule(L.LightningDataModule):
             pin_memory_device='cuda',
             prefetch_factor=5
         )
-        return CudaDataLoader(loader, 'cuda', queue_size=10)
+        # return CudaDataLoader(loader, 'cuda', queue_size=10)
+        return loader
 
 
 
