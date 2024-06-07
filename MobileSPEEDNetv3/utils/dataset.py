@@ -541,7 +541,7 @@ class SpeedDataModule(L.LightningDataModule):
             pin_memory_device='cuda',
             prefetch_factor=5
         )
-        return CudaDataLoader(loader, 'cuda', queue_size=4)
+        return CudaDataLoader(loader, 'cuda', queue_size=10)
     
     def val_dataloader(self) -> MultiEpochsDataLoader:
         loader = MultiEpochsDataLoader(
@@ -554,7 +554,7 @@ class SpeedDataModule(L.LightningDataModule):
             pin_memory_device='cuda',
             prefetch_factor=5
         )
-        return CudaDataLoader(loader, 'cuda', queue_size=4)
+        return CudaDataLoader(loader, 'cuda', queue_size=10)
 
 
 
