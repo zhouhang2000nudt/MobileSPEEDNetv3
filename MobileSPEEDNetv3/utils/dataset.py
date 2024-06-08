@@ -398,7 +398,7 @@ class Speed(Dataset):
                     image = CropAndPad(image, bbox)
                 dice = np.random.rand()
                 if dice < Speed.config["DropBlockSafe"]["p"]:
-                    image = DropBlockSafe(image, bbox, Speed.config["DropBlockSafe"]["p"])
+                    image = DropBlockSafe(image, bbox, Speed.config["DropBlockSafe"]["drop_num"])
         
         if "self_supervised" in self.mode:
             image_1 = self.transform(image_1)       # (1, 480, 768)
@@ -479,7 +479,7 @@ class SpeedDataModule(L.LightningDataModule):
         return loader
     
     def val_dataloader(self) -> MultiEpochsDataLoader:
-        loader = torch.utils.data.DataLoader(
+        loader = MultiEpochsDataLoader(
             self.speed_data_val,
             batch_size=self.config["batch_size"] * 2,
             shuffle=False,

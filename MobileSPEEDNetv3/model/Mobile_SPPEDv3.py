@@ -6,15 +6,35 @@ from torch import Tensor
 
 from .block import SPPF, FPNPAN, RepECPHead, Conv2dNormActivation, DCNv2
 from torchvision.models import mobilenet_v3_large, MobileNet_V3_Large_Weights, mobilenet_v3_small, MobileNet_V3_Small_Weights
+from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
+
+from rich import print
 
 class Mobile_SPEEDv3(nn.Module):
     def __init__(self, config: dict):
         super(Mobile_SPEEDv3, self).__init__()
         
-        if config["pretrained"]:
-            self.features = mobilenet_v3_large(weights = MobileNet_V3_Large_Weights.DEFAULT).features[:-1]
-        else:
-            self.features = mobilenet_v3_large().features[:-1]
+        if config["backbone"] == "mobilenet_v3_large":
+            if config["pretrained"]:
+                self.features = mobilenet_v3_large(weights = MobileNet_V3_Large_Weights.DEFAULT).features[:-1]
+            else:
+                self.features = mobilenet_v3_large().features[:-1]
+            self.stage = [7, 13]
+            SPPF_in_channels = 160
+            SPPF_out_channels = 160
+            neck_in_channels = [40, 112, SPPF_out_channels]
+            neck_out_channels = neck_in_channels
+        elif config["backbone"] == "EfficientNet":
+            if config["pretrained"]:
+                self.features = efficientnet_b0(weights = EfficientNet_B0_Weights.DEFAULT).features[:-1]
+            else:
+                self.features = efficientnet_b0().features[:-1]
+            self.stage = [4, 6]
+            SPPF_in_channels = 320
+            SPPF_out_channels = 320
+            neck_in_channels = [40, 112, SPPF_out_channels]
+            neck_out_channels = neck_in_channels
+        # print(self.features)
         
         for deform_layer in config["deform_layers"]:
             InvertedResidual = self.features[deform_layer]
@@ -29,13 +49,11 @@ class Mobile_SPEEDv3(nn.Module):
                 stride=stride[0]
             )
         
-        SPPF_in_channels = 160
-        SPPF_out_channels = 160
+        
         self.SPPF = SPPF(in_channels=SPPF_in_channels,
                          out_channels=SPPF_out_channels)
         
-        neck_in_channels = [40, 112, SPPF_out_channels]
-        neck_out_channels = neck_in_channels
+        
         self.FPNPAN = FPNPAN(in_channels=neck_in_channels)
         
         self.RepECPHead = RepECPHead(in_channels=neck_out_channels, 
@@ -47,9 +65,9 @@ class Mobile_SPEEDv3(nn.Module):
                                      roll_dim=int(360 // config["stride"] + 1 + 2 * config["n"]))
         
     def forward(self, x: Tensor):
-        p3 = self.features[:7](x)
-        p4 = self.features[7:13](p3)
-        p5 = self.features[13:](p4)
+        p3 = self.features[:self.stage[0]](x)
+        p4 = self.features[self.stage[0]:self.stage[1]](p3)
+        p5 = self.features[self.stage[1]:](p4)
         
         p5 = self.SPPF(p5)
         

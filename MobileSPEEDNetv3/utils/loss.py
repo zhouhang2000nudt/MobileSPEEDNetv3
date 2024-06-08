@@ -23,6 +23,10 @@ def Huber_Loss(pre: Tensor, label: Tensor, delta: float = 1.0):
 def Log_Cosh_Loss(pre: Tensor, label: Tensor):
     return torch.mean(torch.sum(torch.log(torch.cosh(pre - label)), dim=1))
 
+@torch.compile
+def Arccos_Loss(pre: Tensor, label: Tensor):
+    return torch.mean(torch.acos(torch.abs(torch.sum(pre * label, dim=1))))
+
 # 分类损失函数
 @torch.compile
 def CrossEntropy_Loss(pre: Tensor, label: Tensor):
@@ -55,6 +59,12 @@ def get_cls_loss(loss_type: str, **kwargs):
     elif loss_type == "Focal":
         return partial(Focal_Loss, **kwargs)
 
+def get_ori_loss(loss_type: str, **kwargs):
+    if loss_type not in ["Arccos"]:
+        raise ValueError("Invalid loss type.")
+    if loss_type == "Arccos":
+        return Arccos_Loss
+
 # ====================位置损失====================
 
 class PoseLoss(nn.Module):
@@ -67,10 +77,10 @@ class PoseLoss(nn.Module):
 
 
 # ====================ori loss====================
-class OriValLoss(nn.Module):
+class OriLoss(nn.Module):
     def __init__(self, loss_type: str, **kwargs):
-        super(OriValLoss, self).__init__()
-        self.loss = get_cls_loss(loss_type, **kwargs)
+        super(OriLoss, self).__init__()
+        self.loss = get_ori_loss(loss_type, **kwargs)
     
     def forward(self, ori_pre, ori_label):
         return self.loss(ori_pre, ori_label)

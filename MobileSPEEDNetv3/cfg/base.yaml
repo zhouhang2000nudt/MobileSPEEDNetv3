@@ -33,7 +33,7 @@ s: 0.1                              # ratio/sigma
 
 
 # ==========================model==========================
-backbone: mobilenet_v3_large
+backbone: EfficientNet          # EfficientNet
 pos_dim: 3                             # 位置维度
 pretrained: true
 deform_layers: []
@@ -43,9 +43,10 @@ pool_size: [3, 2, 1]                # 池化尺寸
 
 # ==========================loss===========================
 ALPHA: [1, 5]                       # Score = ALPHA[0] * POS_Error + ALPHA[1] * Euler_Error
-BETA: [1.2, 8]                  # Loss = BETA[0] * POS_LOSS + BETA[1] * Euler_LOSS + BETA[2] * CLS_LOSS
+BETA: [1.2, 8, 5]                  # Loss = BETA[0] * POS_LOSS + BETA[1] * Euler_LOSS + BETA[2] * CLS_LOSS
 pos_loss: MSE                       # 位置损失函数 MAE/MSE/Huber/Log_Cosh (regression loss)
 euler_loss: CrossEntropy              # 姿态值损失函数 CrossEntropy/Focal
+ori_loss: Arccos
 
 # ==========================train==========================
 optimizer: AdamW       # 优化器 Adam/SGD/AdamW
