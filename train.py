@@ -22,7 +22,6 @@ from lightning.pytorch.profilers import SimpleProfiler
 from lightning.pytorch import seed_everything
 
 
-
 if __name__ == "__main__":
     
     # ====================配置====================

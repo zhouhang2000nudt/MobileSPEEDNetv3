@@ -333,7 +333,7 @@ class Speed(Dataset):
                         warpped = False
                         break
                     warpped_time += 1
-                    image_warpped, pos_warpped, ori_warpped, M_warpped = rotate_image(image, pos, ori, Speed.camera, Speed.config["Rotate"]["img_angle"])
+                    image_warpped, pos_warpped, ori_warpped, M_warpped = rotate_image(image, pos, ori, Speed.camera.SK, Speed.camera.SK_inv, Speed.config["Rotate"]["img_angle"])
                     bbox_warpped = warp_boxes(np.array([bbox]), M_warpped, height=image.shape[0], width=image.shape[1]).tolist()[0]
                     if bbox_in_image(bbox_warpped, bbox_area):
                         warpped = True
@@ -344,7 +344,7 @@ class Speed(Dataset):
                         warpped = False
                         break
                     warpped_time += 1
-                    image_warpped, pos_warpped, ori_warpped, M_warpped = rotate_cam(image, pos, ori, Speed.camera, Speed.config["Rotate"]["cam_angle"])
+                    image_warpped, pos_warpped, ori_warpped, M_warpped = rotate_cam(image, pos, ori, Speed.camera.SK, Speed.camera.SK_inv, Speed.config["Rotate"]["cam_angle"])
                     bbox_warpped = warp_boxes(np.array([bbox]), M_warpped, height=image.shape[0], width=image.shape[1]).tolist()[0]
                     if bbox_in_image(bbox_warpped, bbox_area):
                         warpped = True
@@ -467,17 +467,7 @@ class SpeedDataModule(L.LightningDataModule):
             self.speed_data_val: Speed = Speed("val")
     
     def train_dataloader(self) -> MultiEpochsDataLoader:
-        # loader = MultiEpochsDataLoader(
-        #     self.speed_data_train,
-        #     batch_size=self.config["batch_size"],
-        #     shuffle=True,
-        #     num_workers=self.config["workers"],
-        #     persistent_workers=True,
-        #     pin_memory=True,
-        #     pin_memory_device='cuda',
-        #     prefetch_factor=5
-        # )
-        loader = DataLoaderX(
+        loader = MultiEpochsDataLoader(
             self.speed_data_train,
             batch_size=self.config["batch_size"],
             shuffle=True,
@@ -485,22 +475,11 @@ class SpeedDataModule(L.LightningDataModule):
             persistent_workers=True,
             pin_memory=True,
             pin_memory_device='cuda',
-            prefetch_factor=5
         )
         return loader
     
     def val_dataloader(self) -> MultiEpochsDataLoader:
-        # loader = torch.utils.data.DataLoader(
-        #     self.speed_data_val,
-        #     batch_size=self.config["batch_size"] * 2,
-        #     shuffle=False,
-        #     num_workers=self.config["workers"],
-        #     persistent_workers=True,
-        #     pin_memory=True,
-        #     pin_memory_device='cuda',
-        #     prefetch_factor=5
-        # )
-        loader = DataLoaderX(
+        loader = torch.utils.data.DataLoader(
             self.speed_data_val,
             batch_size=self.config["batch_size"] * 2,
             shuffle=False,
@@ -508,7 +487,6 @@ class SpeedDataModule(L.LightningDataModule):
             persistent_workers=True,
             pin_memory=True,
             pin_memory_device='cuda',
-            prefetch_factor=5
         )
         return loader
 

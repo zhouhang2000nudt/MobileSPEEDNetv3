@@ -106,7 +106,7 @@ def clamp(bbox):
     return bbox
 
 
-def rotate_image(image, pos, ori, camera, rot_max_magnitude):
+def rotate_image(image, pos, ori, SK, SK_inv, rot_max_magnitude):
     """Data augmentation: rotate image and adapt position/orientation.
     Rotation amplitude is randomly picked from [-rot_max_magnitude/2, +rot_max_magnitude/2]
     """
@@ -121,7 +121,7 @@ def rotate_image(image, pos, ori, camera, rot_max_magnitude):
     
 
     # Construct warping (perspective) matrix
-    warp_matrix = camera.SK @ r_change @ camera.SK_inv
+    warp_matrix = SK @ r_change @ SK_inv
 
     height, width = np.shape(image)[:2]
 
@@ -137,7 +137,7 @@ def rotate_image(image, pos, ori, camera, rot_max_magnitude):
     return image_warped, pos_new, ori_new, warp_matrix
 
 
-def rotate_cam(image, pos, ori, camera, rot_max_magnitude):
+def rotate_cam(image, pos, ori, SK, SK_inv, rot_max_magnitude):
     """Data augmentation: rotate image and adapt position/orientation.
     Rotation amplitude is randomly picked from [-rot_max_magnitude/2, +rot_max_magnitude/2]
     """
@@ -152,7 +152,7 @@ def rotate_cam(image, pos, ori, camera, rot_max_magnitude):
     
 
     # Construct warping (perspective) matrix
-    warp_matrix = camera.SK @ r_change @ camera.SK_inv
+    warp_matrix = SK @ r_change @ SK_inv
 
     height, width = np.shape(image)[:2]
 

@@ -21,7 +21,7 @@ self_supervised: false
 data_dir: ../datasets/speed     # 数据路径
 workers: 20            # dataloader workers
 ram: true            # 是否使用内存加载数据
-imgsz: [480, 768]     # 图片大小 [480, 768]
+imgsz: [600, 960]     # 图片大小 [480, 768]
 resize_first: false    # 是否先resize
 
 
