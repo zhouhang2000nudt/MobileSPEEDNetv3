@@ -81,16 +81,16 @@ class BiFPN(nn.Module):
         fused_channel_p34 = in_channels[0] + in_channels[1]
         
         # 上采样通路
-        self.p4_fuseconv_up = RepBlock(fused_channel_p45, in_channels[1], kernel_size=3, stride=1)
-        self.p3_fuseconv_up = RepBlock(fused_channel_p34, in_channels[0], kernel_size=3, stride=1)
+        self.p4_fuseconv_up = C2f(fused_channel_p45, in_channels[1])
+        self.p3_fuseconv_up = C2f(fused_channel_p34, in_channels[0])
         
         # 下采样通路
         self.p3_downconv_down = ConvBnAct(in_channels=in_channels[0], out_channels=in_channels[0], kernel_size=3, stride=2, act_layer=nn.SiLU)
         
-        self.p4_fuseconv_down = RepBlock(fused_channel_p34 + in_channels[1], in_channels[1], kernel_size=3, stride=1)
+        self.p4_fuseconv_down = C2f(fused_channel_p34 + in_channels[1], in_channels[1])
         self.p4_downconv_down = ConvBnAct(in_channels=in_channels[1], out_channels=in_channels[1], kernel_size=3, stride=2, act_layer=nn.SiLU)
         
-        self.p5_fuseconv_down = RepBlock(fused_channel_p45, in_channels[2], kernel_size=3, stride=1)
+        self.p5_fuseconv_down = C2f(fused_channel_p45, in_channels[2])
     
     def forward(self, x):
         p3, p4, p5 = x
@@ -128,7 +128,7 @@ class PRC(nn.Module):
 class Head(nn.Module):
     def __init__(self, in_features: int, pos_dim: int, yaw_dim: int, pitch_dim: int, roll_dim: int):
         super(Head, self).__init__()
-        feature_hide = int(in_features // 2)
+        feature_hide = in_features
         self.fc = nn.Sequential(
             nn.Linear(in_features, feature_hide),
             nn.SiLU(inplace=True),
@@ -140,22 +140,19 @@ class Head(nn.Module):
         )
         self.yaw_fc = nn.Sequential(
             nn.Linear(self.ori_hide_features, yaw_dim),
-            nn.Softmax(dim=1),
         )
         self.pitch_fc = nn.Sequential(
             nn.Linear(self.ori_hide_features, pitch_dim),
-            nn.Softmax(dim=1),
         )
         self.roll_fc = nn.Sequential(
             nn.Linear(self.ori_hide_features, roll_dim),
-            nn.Softmax(dim=1),
         )
     
     def forward(self, x):
         x = self.fc(x)
         pos_feature, ori_feature = torch.split(x, [self.pos_hide_features, self.ori_hide_features], dim=1)
         pos = self.pos_fc(pos_feature)
-        yaw = self.yaw_fc(ori_feature)
-        pitch = self.pitch_fc(ori_feature)
-        roll = self.roll_fc(ori_feature)
+        yaw = F.softmax(self.yaw_fc(ori_feature).type(torch.float32), dim=1)
+        pitch = F.softmax(self.pitch_fc(ori_feature).type(torch.float32), dim=1)
+        roll = F.softmax(self.roll_fc(ori_feature).type(torch.float32), dim=1)
         return pos, yaw, pitch, roll

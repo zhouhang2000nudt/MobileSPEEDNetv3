@@ -57,10 +57,11 @@ class LightningMobileSPEEDv3(L.LightningModule):
                     "pos_pred_1", "pos_pred_2", "pos_pred_3",
                     "ori_pred_1", "ori_pred_2", "ori_pred_3", "ori_pred_4",
                     "pos_error(m)", "ori_error(deg)"]]
+        # self.model = torch.compile(self.model)
 
 
-    def forward(self, x):
-        return self.model(x)
+    def forward(self, x1, x2=None):
+        return self.model(x1, x2)
 
     # ===========================train===========================
     def on_train_start(self):
@@ -69,25 +70,36 @@ class LightningMobileSPEEDv3(L.LightningModule):
 
     def training_step(self, batch, batch_idx):
         if self.config["self_supervised"]:
-            pass
+            image_1, image_2 = batch
+            num = image_1.shape[0]
+            out1, out2 = self(image_1, image_2)
+            pos_1, yaw_1, pitch_1, roll_1 = out1
+            pos_2, yaw_2, pitch_2, roll_2 = out2
+            # ori_decode_1 = self.ori_encoder_decoder.decode_ori_batch(yaw_1, pitch_1, roll_1)
+            # ori_decode_2 = self.ori_encoder_decoder.decode_ori_batch(yaw_2, pitch_2, roll_2)
+            train_pos_loss = self.pos_loss(pos_1, pos_2)
+            train_yaw_loss = self.yaw_loss(yaw_1, yaw_2)
+            train_pitch_loss = self.pitch_loss(pitch_1, pitch_2)
+            train_roll_loss = self.roll_loss(roll_1, roll_2)
+            # train_ori_loss = self.ori_loss(ori_decode_1, ori_decode_2)
         else:
             inputs, labels = batch
             num = inputs.shape[0]
             pos, yaw, pitch, roll = self(inputs)
-            ori_decode = self.ori_encoder_decoder.decode_ori_batch(yaw, pitch, roll)
+            # ori_decode = self.ori_encoder_decoder.decode_ori_batch(yaw, pitch, roll)
             train_pos_loss = self.pos_loss(pos, labels["pos"])
             train_yaw_loss = self.yaw_loss(yaw, labels["yaw_encode"])
             train_pitch_loss = self.pitch_loss(pitch, labels["pitch_encode"])
             train_roll_loss = self.roll_loss(roll, labels["roll_encode"])
-            train_ori_loss = self.ori_loss(ori_decode, labels["ori"])
+            # train_ori_loss = self.ori_loss(ori_decode, labels["ori"])
 
-        train_loss = self.BETA[0] * train_pos_loss + self.BETA[1] * (train_yaw_loss + train_pitch_loss + train_roll_loss) + self.BETA[2] * train_ori_loss
+        train_loss = self.BETA[0] * train_pos_loss + self.BETA[1] * (train_yaw_loss + train_pitch_loss + train_roll_loss)# + self.BETA[2] * train_ori_loss
 
         self.train_pos_loss.update(train_pos_loss, num)
         self.train_yaw_loss.update(train_yaw_loss, num)
         self.train_pitch_loss.update(train_pitch_loss, num)
         self.train_roll_loss.update(train_roll_loss, num)
-        self.train_ori_loss.update(train_ori_loss, num)
+        # self.train_ori_loss.update(train_ori_loss, num)
         self.train_loss.update(train_loss, num)
         return train_loss
 
@@ -117,7 +129,20 @@ class LightningMobileSPEEDv3(L.LightningModule):
     def validation_step(self, batch, batch_index):
         # 取出数据
         if self.config["self_supervised"]:
-            pass
+            image_1, image_2 = batch
+            num = image_1.shape[0]
+            out1, out2 = self(image_1, image_2)
+            pos_1, yaw_1, pitch_1, roll_1 = out1
+            pos_2, yaw_2, pitch_2, roll_2 = out2
+            val_pos_loss = self.pos_loss(pos_1, pos_2)
+            val_yaw_loss = self.yaw_loss(yaw_1, yaw_2)
+            val_pitch_loss = self.pitch_loss(pitch_1, pitch_2)
+            val_roll_loss = self.roll_loss(roll_1, roll_2)
+            # val_ori_loss = self.ori_loss(ori_decode_1, ori_decode_2)
+            ori_decode_1 = self.ori_encoder_decoder.decode_ori_batch(yaw_1, pitch_1, roll_1)
+            ori_decode_2 = self.ori_encoder_decoder.decode_ori_batch(yaw_2, pitch_2, roll_2)
+            self.pos_error.update(pos_1, pos_2)
+            self.ori_error.update(ori_decode_1, ori_decode_2)
         else:
             inputs, labels = batch
             num = inputs.shape[0]
@@ -129,17 +154,17 @@ class LightningMobileSPEEDv3(L.LightningModule):
             val_pitch_loss = self.pitch_loss(pitch, labels["pitch_encode"])
             val_roll_loss = self.roll_loss(roll, labels["roll_encode"])
             ori_decode = self.ori_encoder_decoder.decode_ori_batch(yaw, pitch, roll)
-            val_ori_loss = self.ori_loss(ori_decode, labels["ori"])
+            # val_ori_loss = self.ori_loss(ori_decode, labels["ori"])
             self.ori_error.update(ori_decode, labels["ori"])
             self.pos_error.update(pos, labels["pos"])
 
-        val_loss = self.BETA[0] * val_pos_loss + self.BETA[1] * (val_yaw_loss + val_pitch_loss + val_roll_loss) + self.BETA[2] * val_ori_loss
+        val_loss = self.BETA[0] * val_pos_loss + self.BETA[1] * (val_yaw_loss + val_pitch_loss + val_roll_loss)# + self.BETA[2] * val_ori_loss
         # 计算指标
         self.val_pos_loss.update(val_pos_loss, num)
         self.val_yaw_loss.update(val_yaw_loss, num)
         self.val_pitch_loss.update(val_pitch_loss, num)
         self.val_roll_loss.update(val_roll_loss, num)
-        self.val_ori_loss.update(val_ori_loss, num)
+        # self.val_ori_loss.update(val_ori_loss, num)
         self.val_loss.update(val_loss, num)
         
         

@@ -3,10 +3,8 @@ from torch.utils.data import Dataset, random_split, Subset
 from pathlib import Path
 from threading import Thread
 from tqdm import tqdm
-from numpy import ndarray
 from .utils import rotate_image, rotate_cam, resize, Camera, warp_boxes, bbox_in_image, OriEncoderDecoder, OriEncoderDecoderGauss
 from typing import List
-from queue import Queue
 
 import albumentations as A
 import cv2 as cv
@@ -15,8 +13,7 @@ import numpy as np
 
 import json
 import torch
-from prefetch_generator import BackgroundGenerator
-
+from torch.utils.data import DataLoader
 
 
 def CropAndPad(img: np.array, bbox: List[float]):
@@ -63,7 +60,7 @@ def DropBlockSafe(img: np.array, bbox: List[float], drop_num_lim: int):
             pass
     return img
 
-class MultiEpochsDataLoader(torch.utils.data.DataLoader):
+class MultiEpochsDataLoader(DataLoader):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._DataLoader__initialized = False
@@ -90,12 +87,6 @@ class _RepeatSampler(object):
     def __iter__(self):
         while True:
             yield from iter(self.sampler)
-
-
-class DataLoaderX(torch.utils.data.DataLoader):
-
-    def __iter__(self):
-        return BackgroundGenerator(super().__iter__())
 
 
 def prepare_Speed(config: dict):
@@ -148,7 +139,19 @@ def prepare_Speed(config: dict):
             "transform": v2.Compose([
                 v2.ToImage(), v2.ToDtype(torch.float32, scale=True),
             ]),
-            "A_transform": A.Compose([
+            "A_transform": [A.Compose([
+                A.Flip(p=0.5),
+                A.Affine(translate_percent={"x": (-0.2, 0.2), "y": (-0.2, 0.2)},
+                         p=1),
+                A.SafeRotate(limit=180, p=1.0),
+                A.Compose([
+                    A.BBoxSafeRandomCrop(p=1.0),
+                    A.PadIfNeeded(min_height=config["imgsz"][0], min_width=config["imgsz"][1], border_mode=cv.BORDER_REPLICATE, position="random", p=1.0),
+                ], p=1.0)
+            ],
+            p=1,
+            bbox_params=A.BboxParams(format="pascal_voc", label_fields=["category_ids"])),
+            A.Compose([
                 A.OneOf([
                     A.AdvancedBlur(blur_limit=(3, 7),
                                    rotate_limit=25,
@@ -163,16 +166,11 @@ def prepare_Speed(config: dict):
                               contrast=0.3,
                               saturation=0.3,
                               hue=0.3,
-                              p=1),
-                A.Affine(translate_percent={"x": (-0.2, 0.2), "y": (-0.2, 0.2)},
-                         p=1),
-                A.Compose([
-                    A.BBoxSafeRandomCrop(p=1.0),
-                    A.PadIfNeeded(min_height=1200, min_width=1920, border_mode=cv.BORDER_REPLICATE, position="random", p=1.0),
-                ], p=1),
+                              p=1)
             ],
             p=1,
             bbox_params=A.BboxParams(format="pascal_voc", label_fields=["category_ids"]))
+            ]
         },
         "self_supervised_val": {
             "transform": v2.Compose([
@@ -185,8 +183,8 @@ def prepare_Speed(config: dict):
                 A.SafeRotate(limit=180, p=1.0),
                 A.Compose([
                     A.BBoxSafeRandomCrop(p=1.0),
-                    A.PadIfNeeded(min_height=1200, min_width=1920, border_mode=cv.BORDER_REPLICATE, position="random", p=1.0),
-                ], p=1)
+                    A.PadIfNeeded(min_height=config["imgsz"][0], min_width=config["imgsz"][1], border_mode=cv.BORDER_REPLICATE, position="random", p=1.0),
+                ], p=1.0)
             ],
             p=1,
             bbox_params=A.BboxParams(format="pascal_voc", label_fields=["category_ids"])),
@@ -357,18 +355,19 @@ class Speed(Dataset):
                 bbox = list(map(int, bbox_warpped))
         
         # 进行resize
-        dice = np.random.rand()
-        if "train" in self.mode or "self_supervised" in self.mode:
-            if dice < Speed.config["Resize"]["p"]:
-                if 10 < pos[-1] / (1 + Speed.config["Resize"]["ratio"]) and pos[-1] / (1 - Speed.config["Resize"]["ratio"]) < 35:
-                    image_warpped, pos_warpped, ori_warpped, M_warpped = resize(image, pos, ori, Speed.camera, Speed.config["Resize"]["ratio"])
-                    bbox_warpped = warp_boxes(np.array([bbox]), M_warpped, height=image.shape[0], width=image.shape[1]).tolist()[0]
-                    warpped = True
-            if warpped:
-                image = image_warpped
-                pos = pos_warpped
-                ori = ori_warpped
-                bbox = list(map(int, bbox_warpped))
+        if ("train" in self.mode or "self_supervised" in self.mode):
+            dice = np.random.rand()
+            if "train" in self.mode or "self_supervised" in self.mode:
+                if dice < Speed.config["Resize"]["p"]:
+                    if 10 < pos[-1] / (1 + Speed.config["Resize"]["ratio"]) and pos[-1] / (1 - Speed.config["Resize"]["ratio"]) < 35:
+                        image_warpped, pos_warpped, ori_warpped, M_warpped = resize(image, pos, ori, Speed.camera, Speed.config["Resize"]["ratio"])
+                        bbox_warpped = warp_boxes(np.array([bbox]), M_warpped, height=image.shape[0], width=image.shape[1]).tolist()[0]
+                        warpped = True
+                if warpped:
+                    image = image_warpped
+                    pos = pos_warpped
+                    ori = ori_warpped
+                    bbox = list(map(int, bbox_warpped))
 
         
         image = cv.cvtColor(image, cv.COLOR_GRAY2RGB)       # 转换为RGB格式
@@ -384,10 +383,12 @@ class Speed(Dataset):
             image_1 = transformed_1["image"]
             bbox_1 = list(map(int, list(transformed_1["bboxes"][0])))
             image_1 = CropAndPad(image_1, bbox_1)
+            image_1 = DropBlockSafe(image_1, bbox=bbox_1, drop_num_lim=Speed.config["DropBlockSafe"]["drop_num"])
             transformed_2 = self.A_transform[1](image=image, bboxes=[bbox], category_ids=[1])
             image_2 = transformed_2["image"]
             bbox_2 = list(map(int, list(transformed_2["bboxes"][0])))
             image_2 = CropAndPad(image_2, bbox_2)
+            image_2 = DropBlockSafe(image_2, bbox=bbox_2, drop_num_lim=Speed.config["DropBlockSafe"]["drop_num"])
         else:
             if self.A_transform is not None:
                 transformed = self.A_transform(image=image, bboxes=[bbox], category_ids=[1])
@@ -402,9 +403,7 @@ class Speed(Dataset):
         
         if "self_supervised" in self.mode:
             image_1 = self.transform(image_1)       # (1, 480, 768)
-            image_1 = image_1.repeat(3, 1, 1)       # (3, 480, 768)
             image_2 = self.transform(image_2)       # (1, 480, 768)
-            image_2 = image_2.repeat(3, 1, 1)
             return image_1, image_2
         
         # 使用torchvision转换图片
@@ -467,7 +466,7 @@ class SpeedDataModule(L.LightningDataModule):
             self.speed_data_val: Speed = Speed("val")
     
     def train_dataloader(self) -> MultiEpochsDataLoader:
-        loader = MultiEpochsDataLoader(
+        loader = DataLoader(
             self.speed_data_train,
             batch_size=self.config["batch_size"],
             shuffle=True,
@@ -479,9 +478,9 @@ class SpeedDataModule(L.LightningDataModule):
         return loader
     
     def val_dataloader(self) -> MultiEpochsDataLoader:
-        loader = MultiEpochsDataLoader(
+        loader = DataLoader(
             self.speed_data_val,
-            batch_size=self.config["batch_size"] * 2,
+            batch_size=self.config["batch_size"],
             shuffle=False,
             num_workers=self.config["workers"],
             persistent_workers=True,
