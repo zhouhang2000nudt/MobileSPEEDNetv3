@@ -5,7 +5,6 @@ import math
 
 from typing import List, Union
 from .RepVGG import RepVGGplusBlock
-from functools import partial
 from torchvision.ops import Conv2dNormActivation
 from torchvision.models.mobilenetv3 import InvertedResidual, InvertedResidualConfig
 

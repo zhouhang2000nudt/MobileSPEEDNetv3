@@ -7,7 +7,7 @@ import timm
 
 from rich import print
 from ptflops import get_model_complexity_info
-from MobileSPEEDNetv3.model import Mobile_SPEEDv3, Mobile_SPEEDv3_timm
+from MobileSPEEDNetv3.model import Mobile_SPEEDv3, LightSPEED
 from MobileSPEEDNetv3.utils.config import get_config
 
 
@@ -25,13 +25,13 @@ print(timm.list_models("*mobilenet*"))
 # print(timm_model)
 # profile_model(timm_model)
 print("=====================================")
-t = torch.rand([1, 3, 224, 224])
+t = torch.rand([1, 3, 600, 960])
 config = get_config()
 config["pretrained"] = False
-full_model = Mobile_SPEEDv3_timm(config)
+full_model = LightSPEED(config)
 print(full_model)
 full_model.eval()
-full_model.switch_repvggplus_to_deploy()
+# full_model._switch_to_deploy()
 print(full_model)
 # print(full_model(t).shape)
 profile_model(full_model)

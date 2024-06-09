@@ -142,8 +142,8 @@ if __name__ == "__main__":
         limit_train_batches, limit_val_batches = 1.0, 1.0
         torch.autograd.detect_anomaly(False)
         torch.autograd.set_detect_anomaly(False)
-        torch.autograd.profiler.emit_nvtx(False)
         torch.autograd.profiler.profile(False)
+        torch.autograd.profiler.emit_nvtx(False)
     trainer = Trainer(accelerator=config["accelerator"],        # 加速器
                       logger=comet_logger,
                       callbacks=callbacks,
