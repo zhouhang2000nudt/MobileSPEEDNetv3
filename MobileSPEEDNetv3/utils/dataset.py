@@ -241,10 +241,6 @@ class ImageReader(Thread):
         self.image_dir: Path = image_dir
         self.image_name: list = img_name
         self.img_dict: dict = {}
-        if self.config["resize_first"]:
-            self.Resize = A.Compose([A.Resize(height=Speed.config["imgsz"][0], width=Speed.config["imgsz"][1], p=1.0, interpolation=cv.INTER_LINEAR)],
-            p=1,
-            bbox_params=A.BboxParams(format="pascal_voc", label_fields=["category_ids"]))
     
     def run(self):
         for img_name in tqdm(self.image_name):
@@ -254,10 +250,6 @@ class ImageReader(Thread):
                 bbox[2] = 1919
             if bbox[3] >= 1200:
                 bbox[3] = 1199
-            if self.config["resize_first"]:
-                transformed = self.Resize(image=image, bboxes=[bbox], category_ids=[1])
-                image = transformed["image"]
-                bbox = list(map(int, list(transformed["bboxes"][0])))
             Speed.labels[img_name]["bbox"] = bbox
             self.img_dict[img_name] = image
     
@@ -310,16 +302,63 @@ class Speed(Dataset):
                 bbox[2] = 1919
             if bbox[3] >= 1200:
                 bbox[3] = 1199
-            if Speed.config["resize_first"]:
-                transformed = self.Resize(image=image, bboxes=[bbox], category_ids=[1], interpolation=cv.INTER_LINEAR)
-                image = transformed["image"]
-                bbox = list(map(int, list(transformed["bboxes"][0])))
             
         
         ori = np.array(self.labels[filename]["ori"])   # 姿态
         pos = np.array(self.labels[filename]["pos"])   # 位置
         
-        # 先进行warpping
+        
+        # 先进行Albumentation增强
+        if "self_supervised" in self.mode:
+            # 空间变换
+            transformed = self.A_transform[0](image=image, bboxes=[bbox], category_ids=[1])
+            image = transformed["image"]
+            bbox = list(map(int, list(transformed["bboxes"][0])))
+            # 像素变换
+            transformed_1 = self.A_transform[1](image=image, bboxes=[bbox], category_ids=[1])
+            image_1 = transformed_1["image"]
+            bbox_1 = list(map(int, list(transformed_1["bboxes"][0])))
+            image_1 = CropAndPad(image_1, bbox_1)
+            image_1 = DropBlockSafe(image_1, bbox=bbox_1, drop_num_lim=Speed.config["DropBlockSafe"]["drop_num"])
+            transformed_2 = self.A_transform[1](image=image, bboxes=[bbox], category_ids=[1])
+            image_2 = transformed_2["image"]
+            bbox_2 = list(map(int, list(transformed_2["bboxes"][0])))
+            image_2 = CropAndPad(image_2, bbox_2)
+            image_2 = DropBlockSafe(image_2, bbox=bbox_2, drop_num_lim=Speed.config["DropBlockSafe"]["drop_num"])
+        else:
+            if self.A_transform is not None:
+                transformed = self.A_transform(image=image, bboxes=[bbox], category_ids=[1])
+                image = transformed["image"]
+                bbox = list(map(int, list(transformed["bboxes"][0])))
+                dice = np.random.rand()
+                if dice < Speed.config["CropAndPad"]["p"]:
+                    image = CropAndPad(image, bbox)
+                dice = np.random.rand()
+                if dice < Speed.config["DropBlockSafe"]["p"]:
+                    image = DropBlockSafe(image, bbox, Speed.config["DropBlockSafe"]["drop_num"])
+        
+        # Resize到设定大小
+        if Speed.config["resize_first"]:
+            transformed = self.Resize(image=image, bboxes=[bbox], category_ids=[1], interpolation=cv.INTER_LINEAR)
+            image = transformed["image"]
+            bbox = list(map(int, list(transformed["bboxes"][0])))
+        
+        # 进行resize数据增强
+        if ("train" in self.mode or "self_supervised" in self.mode):
+            dice = np.random.rand()
+            if "train" in self.mode or "self_supervised" in self.mode:
+                if dice < Speed.config["Resize"]["p"]:
+                    if 10 < pos[-1] / (1 + Speed.config["Resize"]["ratio"]) and pos[-1] / (1 - Speed.config["Resize"]["ratio"]) < 35:
+                        image_warpped, pos_warpped, ori_warpped, M_warpped = resize(image, pos, ori, Speed.camera, Speed.config["Resize"]["ratio"])
+                        bbox_warpped = warp_boxes(np.array([bbox]), M_warpped, height=image.shape[0], width=image.shape[1]).tolist()[0]
+                        warpped = True
+                if warpped:
+                    image = image_warpped
+                    pos = pos_warpped
+                    ori = ori_warpped
+                    bbox = list(map(int, bbox_warpped))
+        
+        # 进行warpping
         dice = np.random.rand()
         if ("train" in self.mode or "self_supervised" in self.mode) and (Speed.config["Rotate"]["Rotate_img"] or Speed.config["Rotate"]["Rotate_cam"]):
             warpped_time = 0
@@ -354,52 +393,7 @@ class Speed(Dataset):
                 ori = ori_warpped
                 bbox = list(map(int, bbox_warpped))
         
-        # 进行resize
-        if ("train" in self.mode or "self_supervised" in self.mode):
-            dice = np.random.rand()
-            if "train" in self.mode or "self_supervised" in self.mode:
-                if dice < Speed.config["Resize"]["p"]:
-                    if 10 < pos[-1] / (1 + Speed.config["Resize"]["ratio"]) and pos[-1] / (1 - Speed.config["Resize"]["ratio"]) < 35:
-                        image_warpped, pos_warpped, ori_warpped, M_warpped = resize(image, pos, ori, Speed.camera, Speed.config["Resize"]["ratio"])
-                        bbox_warpped = warp_boxes(np.array([bbox]), M_warpped, height=image.shape[0], width=image.shape[1]).tolist()[0]
-                        warpped = True
-                if warpped:
-                    image = image_warpped
-                    pos = pos_warpped
-                    ori = ori_warpped
-                    bbox = list(map(int, bbox_warpped))
-
-        
         image = cv.cvtColor(image, cv.COLOR_GRAY2RGB)       # 转换为RGB格式
-        
-        # 进行Albumentation增强
-        if "self_supervised" in self.mode:
-            # 空间变换
-            transformed = self.A_transform[0](image=image, bboxes=[bbox], category_ids=[1])
-            image = transformed["image"]
-            bbox = list(map(int, list(transformed["bboxes"][0])))
-            # 像素变换
-            transformed_1 = self.A_transform[1](image=image, bboxes=[bbox], category_ids=[1])
-            image_1 = transformed_1["image"]
-            bbox_1 = list(map(int, list(transformed_1["bboxes"][0])))
-            image_1 = CropAndPad(image_1, bbox_1)
-            image_1 = DropBlockSafe(image_1, bbox=bbox_1, drop_num_lim=Speed.config["DropBlockSafe"]["drop_num"])
-            transformed_2 = self.A_transform[1](image=image, bboxes=[bbox], category_ids=[1])
-            image_2 = transformed_2["image"]
-            bbox_2 = list(map(int, list(transformed_2["bboxes"][0])))
-            image_2 = CropAndPad(image_2, bbox_2)
-            image_2 = DropBlockSafe(image_2, bbox=bbox_2, drop_num_lim=Speed.config["DropBlockSafe"]["drop_num"])
-        else:
-            if self.A_transform is not None:
-                transformed = self.A_transform(image=image, bboxes=[bbox], category_ids=[1])
-                image = transformed["image"]
-                bbox = list(map(int, list(transformed["bboxes"][0])))
-                dice = np.random.rand()
-                if dice < Speed.config["CropAndPad"]["p"]:
-                    image = CropAndPad(image, bbox)
-                dice = np.random.rand()
-                if dice < Speed.config["DropBlockSafe"]["p"]:
-                    image = DropBlockSafe(image, bbox, Speed.config["DropBlockSafe"]["drop_num"])
         
         if "self_supervised" in self.mode:
             image_1 = self.transform(image_1)       # (1, 480, 768)

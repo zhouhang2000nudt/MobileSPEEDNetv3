@@ -7,6 +7,7 @@ from torch import Tensor
 from .block import SPPF, FPNPAN, RepECPHead, Conv2dNormActivation, DCNv2
 from torchvision.models import mobilenet_v3_large, MobileNet_V3_Large_Weights, mobilenet_v3_small, MobileNet_V3_Small_Weights
 from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
+from torchvision.models import regnet_y_800mf, RegNetY_800MF_Weights
 
 from rich import print
 
@@ -31,7 +32,7 @@ class Mobile_SPEEDv3(nn.Module):
                 self.features = efficientnet_b0().features[:-1]
             self.stage = [4, 6]
             SPPF_in_channels = 320
-            SPPF_out_channels = 320
+            SPPF_out_channels = 240
             neck_in_channels = [40, 112, SPPF_out_channels]
             neck_out_channels = neck_in_channels
         # print(self.features)

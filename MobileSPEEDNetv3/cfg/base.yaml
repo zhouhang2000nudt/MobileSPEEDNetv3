@@ -21,7 +21,7 @@ self_supervised: false
 data_dir: ../datasets/speed     # 数据路径
 workers: 20            # dataloader workers
 ram: true            # 是否使用内存加载数据
-imgsz: [600, 960]     # 图片大小 [480, 768]
+imgsz: [480, 768]     # 图片大小 [480, 768]
 resize_first: false    # 是否先resize
 
 
@@ -33,8 +33,8 @@ s: 0.1                              # ratio/sigma
 
 
 # ==========================model==========================
-backbone: YOLOv8          # EfficientNet
-pos_dim: 3                             # 位置维度
+backbone: EfficientNet                  # EfficientNet
+pos_dim: 3                              # 位置维度
 pretrained: true
 deform_layers: []
 neck: FPNPAN                            # FPNPAN/BiFPN/AFPN
@@ -50,7 +50,7 @@ ori_loss: Arccos
 
 # ==========================train==========================
 optimizer: AdamW       # 优化器 Adam/SGD/AdamW
-lr0: 0.0005            # 初始学习率
+lr0: 0.001            # 初始学习率
 momentum: 0.937       # 动量
 weight_decay: 0.001    # 权重衰减
 epoch: 200            # 训练轮数
@@ -62,7 +62,7 @@ lr_scheduler: WarmupCosineAnnealingLR # 学习率调度器 WarmupCosineAnnealing
 
 # WarmupCosineAnnealingLR 参数
 warmup_epochs: 5      # warmup轮数
-lr_min: 0.000005        # 最小学习率
+lr_min: 0.00001        # 最小学习率
 
 # ReduceLROnPlateau 参数
 factor: 0.1           # 学习率衰减因子
@@ -74,7 +74,7 @@ milestones: [30, 60]  # 学习率衰减里程碑
 
 # ==========================Augmentation===================
 Augmentation:
-  p: 0.01
+  p: 0.1
 
 Rotate:
   Rotate_img: true
@@ -84,12 +84,12 @@ Rotate:
   p: 1.0             # p为图片旋转的概率，(1-p)为相机旋转的概率
 
 Resize:
-  ratio: 0.5
+  ratio: 1.0
   p: 0.5
 
 CropAndPad:
-  p: 0.5
+  p: 1.0
 
 DropBlockSafe:
-  p: 0.5
+  p: 1.0
   drop_num: 5
