@@ -15,7 +15,9 @@ category_ids = [1]
 category_id_to_name = {1: 'satellite'}
 
 config = get_config()
-config["ram"] = False
+# config["ram"] = False
+config["debug"] = True
+config["offline"] = True
 config["resize_first"] = False
 prepare_Speed(config)
 speed = Speed("train")

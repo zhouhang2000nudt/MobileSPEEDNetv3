@@ -215,7 +215,10 @@ def prepare_Speed(config: dict):
     Speed.labels = json.load(open(Speed.label_file, "r"))
     
     # 采样列表
-    Speed.img_name = list(Speed.labels.keys())
+    if config["debug"]:
+        Speed.img_name = list(Speed.labels.keys())[:100]
+    else:
+        Speed.img_name = list(Speed.labels.keys())
     num = len(Speed.img_name)
     train_num = int(num * Speed.config["split"][0])
     val_num = num - train_num
@@ -291,7 +294,7 @@ class Speed(Dataset):
 
     def __getitem__(self, index) -> tuple:
         filename = self.sample_index[index].strip()                  # 图片文件名
-        # filename = "img000001.jpg"
+        filename = "img000001.jpg"
         if Speed.config["ram"]:
             image = Speed.img_dict[filename]
             bbox = self.labels[filename]["bbox"]
@@ -348,10 +351,17 @@ class Speed(Dataset):
         if "train" in self.mode or "self_supervised" in self.mode:
             warpped = False
             if dice < Speed.config["Resize"]["p"]:
-                if 10 < pos[-1] / (1 + Speed.config["Resize"]["ratio"]) and pos[-1] / (1 - Speed.config["Resize"]["ratio"]) < 35:
+                warpped_time = 0
+                while True:
+                    if warpped_time > 5:
+                        warpped = False
+                        break
+                    warpped_time += 1
                     image_warpped, pos_warpped, ori_warpped, M_warpped = resize(image, pos, ori, Speed.camera, Speed.config["Resize"]["ratio"])
                     bbox_warpped = warp_boxes(np.array([bbox]), M_warpped, height=image.shape[0], width=image.shape[1]).tolist()[0]
-                    warpped = True
+                    if 10 < np.linalg.norm(pos_warpped) < 40:
+                        warpped = True
+                        break
             if warpped:
                 image = image_warpped
                 pos = pos_warpped
