@@ -344,19 +344,19 @@ class Speed(Dataset):
             bbox = list(map(int, list(transformed["bboxes"][0])))
         
         # 进行resize数据增强
-        if ("train" in self.mode or "self_supervised" in self.mode):
-            dice = np.random.rand()
-            if "train" in self.mode or "self_supervised" in self.mode:
-                if dice < Speed.config["Resize"]["p"]:
-                    if 10 < pos[-1] / (1 + Speed.config["Resize"]["ratio"]) and pos[-1] / (1 - Speed.config["Resize"]["ratio"]) < 35:
-                        image_warpped, pos_warpped, ori_warpped, M_warpped = resize(image, pos, ori, Speed.camera, Speed.config["Resize"]["ratio"])
-                        bbox_warpped = warp_boxes(np.array([bbox]), M_warpped, height=image.shape[0], width=image.shape[1]).tolist()[0]
-                        warpped = True
-                if warpped:
-                    image = image_warpped
-                    pos = pos_warpped
-                    ori = ori_warpped
-                    bbox = list(map(int, bbox_warpped))
+        dice = np.random.rand()
+        if "train" in self.mode or "self_supervised" in self.mode:
+            warpped = False
+            if dice < Speed.config["Resize"]["p"]:
+                if 10 < pos[-1] / (1 + Speed.config["Resize"]["ratio"]) and pos[-1] / (1 - Speed.config["Resize"]["ratio"]) < 35:
+                    image_warpped, pos_warpped, ori_warpped, M_warpped = resize(image, pos, ori, Speed.camera, Speed.config["Resize"]["ratio"])
+                    bbox_warpped = warp_boxes(np.array([bbox]), M_warpped, height=image.shape[0], width=image.shape[1]).tolist()[0]
+                    warpped = True
+            if warpped:
+                image = image_warpped
+                pos = pos_warpped
+                ori = ori_warpped
+                bbox = list(map(int, bbox_warpped))
         
         # 进行warpping
         dice = np.random.rand()

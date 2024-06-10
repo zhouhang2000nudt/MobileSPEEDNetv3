@@ -7,7 +7,6 @@ from torch import Tensor
 from .block import SPPF, FPNPAN, RepECPHead, Conv2dNormActivation, DCNv2
 from torchvision.models import mobilenet_v3_large, MobileNet_V3_Large_Weights, mobilenet_v3_small, MobileNet_V3_Small_Weights
 from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
-from torchvision.models import regnet_y_800mf, RegNetY_800MF_Weights
 
 from rich import print
 
@@ -31,9 +30,9 @@ class Mobile_SPEEDv3(nn.Module):
             else:
                 self.features = efficientnet_b0().features[:-1]
             self.stage = [4, 6]
-            SPPF_in_channels = 320
-            SPPF_out_channels = 240
-            neck_in_channels = [40, 112, SPPF_out_channels]
+            SPPF_in_channels = [40, 112, 320]
+            SPPF_out_channels = [40, 120, 240]
+            neck_in_channels = SPPF_out_channels
             neck_out_channels = neck_in_channels
         # print(self.features)
         
@@ -50,10 +49,12 @@ class Mobile_SPEEDv3(nn.Module):
                 stride=stride[0]
             )
         
-        
-        self.SPPF = SPPF(in_channels=SPPF_in_channels,
-                         out_channels=SPPF_out_channels)
-        
+        self.SPPF_p3 = SPPF(in_channels=SPPF_in_channels[0],
+                            out_channels=SPPF_out_channels[0])
+        self.SPPF_p4 = SPPF(in_channels=SPPF_in_channels[1],
+                            out_channels=SPPF_out_channels[1])
+        self.SPPF_p5 = SPPF(in_channels=SPPF_in_channels[2],
+                            out_channels=SPPF_out_channels[2])
         
         self.FPNPAN = FPNPAN(in_channels=neck_in_channels)
         
@@ -70,7 +71,9 @@ class Mobile_SPEEDv3(nn.Module):
         p4 = self.features[self.stage[0]:self.stage[1]](p3)
         p5 = self.features[self.stage[1]:](p4)
         
-        p5 = self.SPPF(p5)
+        p3 = self.SPPF_p3(p3)
+        p4 = self.SPPF_p4(p4)
+        p5 = self.SPPF_p5(p5)
         
         p3, p4, p5 = self.FPNPAN([p3, p4, p5])
         

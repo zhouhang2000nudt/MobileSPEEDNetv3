@@ -33,7 +33,7 @@ s: 0.1                              # ratio/sigma
 
 
 # ==========================model==========================
-backbone: EfficientNet                  # EfficientNet
+backbone: EfficientNet                      # EfficientNet
 pos_dim: 3                              # 位置维度
 pretrained: true
 deform_layers: []

@@ -60,8 +60,8 @@ class LightningMobileSPEEDv3(L.LightningModule):
         # self.model = torch.compile(self.model)
 
 
-    def forward(self, x1, x2=None):
-        return self.model(x1, x2)
+    def forward(self, x1):
+        return self.model(x1)
 
     # ===========================train===========================
     def on_train_start(self):
