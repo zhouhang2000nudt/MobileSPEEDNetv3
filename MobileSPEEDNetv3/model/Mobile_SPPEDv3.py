@@ -20,9 +20,9 @@ class Mobile_SPEEDv3(nn.Module):
             else:
                 self.features = mobilenet_v3_large().features[:-1]
             self.stage = [7, 13]
-            SPPF_in_channels = 160
-            SPPF_out_channels = 160
-            neck_in_channels = [40, 112, SPPF_out_channels]
+            SPPF_in_channels = [40, 112, 160]
+            SPPF_out_channels = [40, 112, 160]
+            neck_in_channels = SPPF_out_channels
             neck_out_channels = neck_in_channels
         elif config["backbone"] == "EfficientNet":
             if config["pretrained"]:
@@ -31,7 +31,7 @@ class Mobile_SPEEDv3(nn.Module):
                 self.features = efficientnet_b0().features[:-1]
             self.stage = [4, 6]
             SPPF_in_channels = [40, 112, 320]
-            SPPF_out_channels = [40, 120, 240]
+            SPPF_out_channels = [40, 112, 320]
             neck_in_channels = SPPF_out_channels
             neck_out_channels = neck_in_channels
             for name, module in self.features.named_modules():
@@ -53,12 +53,8 @@ class Mobile_SPEEDv3(nn.Module):
                 stride=stride[0]
             )
         
-        self.SPPF_p3 = SPPF(in_channels=SPPF_in_channels[0],
-                            out_channels=SPPF_out_channels[0])
-        self.SPPF_p4 = SPPF(in_channels=SPPF_in_channels[1],
-                            out_channels=SPPF_out_channels[1])
-        self.SPPF_p5 = SPPF(in_channels=SPPF_in_channels[2],
-                            out_channels=SPPF_out_channels[2])
+        self.SPPF_p5 = SPPF(in_channels=SPPF_in_channels[-1],
+                            out_channels=SPPF_out_channels[-1])
         
         self.FPNPAN = FPNPAN(in_channels=neck_in_channels)
         
@@ -75,8 +71,6 @@ class Mobile_SPEEDv3(nn.Module):
         p4 = self.features[self.stage[0]:self.stage[1]](p3)
         p5 = self.features[self.stage[1]:](p4)
         
-        p3 = self.SPPF_p3(p3)
-        p4 = self.SPPF_p4(p4)
         p5 = self.SPPF_p5(p5)
         
         p3, p4, p5 = self.FPNPAN([p3, p4, p5])
