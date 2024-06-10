@@ -470,7 +470,7 @@ class SpeedDataModule(L.LightningDataModule):
             self.speed_data_val: Speed = Speed("val")
     
     def train_dataloader(self) -> MultiEpochsDataLoader:
-        loader = DataLoader(
+        loader = MultiEpochsDataLoader(
             self.speed_data_train,
             batch_size=self.config["batch_size"],
             shuffle=True,
@@ -482,7 +482,7 @@ class SpeedDataModule(L.LightningDataModule):
         return loader
     
     def val_dataloader(self) -> MultiEpochsDataLoader:
-        loader = DataLoader(
+        loader = MultiEpochsDataLoader(
             self.speed_data_val,
             batch_size=self.config["batch_size"],
             shuffle=False,
