@@ -77,15 +77,15 @@ Augmentation:
   p: 0.1
 
 Rotate:
+  p: 1.0             # p为图片旋转的概率，(1-p)为相机旋转的概率
   Rotate_img: true
   Rotate_cam: true
   img_angle: 90
   cam_angle: 10
-  p: 1.0             # p为图片旋转的概率，(1-p)为相机旋转的概率
 
 Resize:
-  ratio: 1.0
-  p: 0.5
+  p: 1.0
+  ratio: 0.5
 
 CropAndPad:
   p: 1.0
