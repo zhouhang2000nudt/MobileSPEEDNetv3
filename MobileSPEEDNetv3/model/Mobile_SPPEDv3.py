@@ -34,7 +34,6 @@ class Mobile_SPEEDv3(nn.Module):
             SPPF_out_channels = [40, 120, 240]
             neck_in_channels = SPPF_out_channels
             neck_out_channels = neck_in_channels
-        # print(self.features)
         
         for deform_layer in config["deform_layers"]:
             InvertedResidual = self.features[deform_layer]

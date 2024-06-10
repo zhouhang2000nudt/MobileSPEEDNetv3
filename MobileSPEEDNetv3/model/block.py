@@ -7,6 +7,9 @@ from typing import List, Union
 from .RepVGG import RepVGGplusBlock
 from torchvision.ops import Conv2dNormActivation
 from torchvision.models.mobilenetv3 import InvertedResidual, InvertedResidualConfig
+from torchvision.models.efficientnet import FusedMBConv, FusedMBConvConfig
+from torchvision.models.efficientnet import MBConv, MBConvConfig
+from .LightSPEEDBlock import C2f
 
 from timm.layers.conv_bn_act import ConvBnAct
 from timm.models._efficientnet_blocks import InvertedResidual
@@ -97,8 +100,8 @@ class SPPF(nn.Module):
     def __init__(self, in_channels: int, out_channels: int, k: int = 5):
         super(SPPF, self).__init__()
         c_ = in_channels // 2
-        self.conv1 = Conv2dNormActivation(in_channels=in_channels, out_channels=c_, kernel_size=1, stride=1)
-        self.conv2 = Conv2dNormActivation(in_channels=c_*4, out_channels=out_channels, kernel_size=1, stride=1)
+        self.conv1 = Conv2dNormActivation(in_channels=in_channels, out_channels=c_, kernel_size=1, stride=1, bias=False)
+        self.conv2 = Conv2dNormActivation(in_channels=c_*4, out_channels=out_channels, kernel_size=1, stride=1, bias=False)
         self.pool = nn.MaxPool2d(kernel_size=k, stride=1, padding=k//2)
     
     def forward(self, x):
@@ -109,7 +112,6 @@ class SPPF(nn.Module):
         return self.conv2(torch.cat([x, y5x5, y9x9, y13x13], dim=1))
 
 # ================== tail end ==================
-
 
 
 
@@ -130,16 +132,16 @@ class FPNPAN(nn.Module):
             pass
         
         # 上采样通路
-        self.p4_fuseconv_up = RepVGGplusBlock(in_channels=fused_channel_p45, out_channels=in_channels[1], kernel_size=3, stride=1, padding=1)
-        self.p3_fuseconv_up = RepVGGplusBlock(in_channels=fused_channel_p34, out_channels=in_channels[0], kernel_size=3, stride=1, padding=1)
+        self.p4_fuseconv_up = C2f(fused_channel_p45, in_channels[1])
+        self.p3_fuseconv_up = C2f(fused_channel_p34, in_channels[0])
         
         # 下采样通路
-        self.p3_downconv_down = ConvBnAct(in_channels=in_channels[0], out_channels=in_channels[0], kernel_size=3, stride=2)
+        self.p3_downconv_down = ConvBnAct(in_channels=in_channels[0], out_channels=in_channels[0], kernel_size=3, stride=2, act_layer=nn.SiLU)
         
-        self.p4_fuseconv_down = RepVGGplusBlock(in_channels=fused_channel_p34, out_channels=in_channels[1], kernel_size=3, stride=1, padding=1)
-        self.p4_downconv_down = ConvBnAct(in_channels=in_channels[1], out_channels=in_channels[1], kernel_size=3, stride=2)
+        self.p4_fuseconv_down = C2f(fused_channel_p34, in_channels[1])
+        self.p4_downconv_down = ConvBnAct(in_channels=in_channels[1], out_channels=in_channels[1], kernel_size=3, stride=2, act_layer=nn.SiLU)
         
-        self.p5_fuseconv_down = RepVGGplusBlock(in_channels=fused_channel_p45, out_channels=in_channels[2], kernel_size=3, stride=1, padding=1)
+        self.p5_fuseconv_down = C2f(fused_channel_p45, in_channels[2])
     
     def forward(self, x):
         p3, p4, p5 = x      # in: 40, 60, 96; p4: 112, 30, 48; p5: 160, 15, 24
@@ -173,33 +175,15 @@ class ECP(nn.Module):
     def __init__(self, in_channels: List[int], expand_ratio: Union[int, List[float]], pool_size: List[int]):
         super(ECP, self).__init__()
         self.ECP_p3 = nn.Sequential(
-            RepVGGplusBlock(
-                in_channels=in_channels[0],
-                out_channels=int(in_channels[0] * expand_ratio[0]),
-                kernel_size=3,
-                stride=1,
-                padding=1
-            ),
+            nn.Identity(),
             nn.AdaptiveAvgPool2d((pool_size[0], pool_size[0])),
         )
         self.ECP_p4 = nn.Sequential(
-            RepVGGplusBlock(
-                in_channels=in_channels[1],
-                out_channels=int(in_channels[1] * expand_ratio[1]),
-                kernel_size=3,
-                stride=1,
-                padding=1
-            ),
+            nn.Identity(),
             nn.AdaptiveAvgPool2d((pool_size[1], pool_size[1])),
         )
         self.ECP_p5 = nn.Sequential(
-            RepVGGplusBlock(
-                in_channels=in_channels[2],
-                out_channels=int(in_channels[2] * expand_ratio[2]),
-                kernel_size=3,
-                stride=1,
-                padding=1
-            ),
+            nn.Identity(),
             nn.AdaptiveAvgPool2d((pool_size[2], pool_size[2])),
         )
     
