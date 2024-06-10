@@ -33,7 +33,7 @@ s: 0.1                              # ratio/sigma
 
 
 # ==========================model==========================
-backbone: EfficientNet                      # EfficientNet
+backbone: mobilenet_v3_large                      # EfficientNet
 pos_dim: 3                              # 位置维度
 pretrained: true
 deform_layers: []
@@ -77,19 +77,19 @@ Augmentation:
   p: 0.1
 
 Rotate:
-  p: 1.0             # p为图片旋转的概率，(1-p)为相机旋转的概率
+  p: 0.8             # p为图片旋转的概率，(1-p)为相机旋转的概率
   Rotate_img: true
   Rotate_cam: true
   img_angle: 90
   cam_angle: 10
 
 Resize:
-  p: 1.0
+  p: 0.5
   ratio: 0.5
 
 CropAndPad:
-  p: 1.0
+  p: 0.5
 
 DropBlockSafe:
-  p: 1.0
+  p: 0.5
   drop_num: 5
