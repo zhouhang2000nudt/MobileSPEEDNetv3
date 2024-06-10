@@ -34,6 +34,11 @@ class Mobile_SPEEDv3(nn.Module):
             SPPF_out_channels = [40, 120, 240]
             neck_in_channels = SPPF_out_channels
             neck_out_channels = neck_in_channels
+            for name, module in self.features.named_modules():
+                if "stochastic_depth" in name:
+                    path = name.split(".")
+                    self.features[int(path[0])][int(path[1])].stochastic_depth = nn.Identity()
+                    
         
         for deform_layer in config["deform_layers"]:
             InvertedResidual = self.features[deform_layer]

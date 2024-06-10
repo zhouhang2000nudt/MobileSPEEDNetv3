@@ -28,10 +28,12 @@ print("=====================================")
 t = torch.rand([1, 3, 600, 960])
 config = get_config()
 config["pretrained"] = False
-full_model = LightSPEED(config)
-print(full_model)
+full_model = Mobile_SPEEDv3(config)
+for name, module in full_model.named_modules():
+    if "stochastic_depth" in name:
+        print(name)
+        print(module)
 full_model.eval()
-# full_model._switch_to_deploy()
 print(full_model)
 # print(full_model(t).shape)
 profile_model(full_model)
