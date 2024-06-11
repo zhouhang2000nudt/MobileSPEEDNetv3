@@ -86,20 +86,20 @@ class LightningMobileSPEEDv3(L.LightningModule):
             inputs, labels = batch
             num = inputs.shape[0]
             pos, yaw, pitch, roll = self(inputs)
-            # ori_decode = self.ori_encoder_decoder.decode_ori_batch(yaw, pitch, roll)
+            ori_decode = self.ori_encoder_decoder.decode_ori_batch(yaw, pitch, roll)
             train_pos_loss = self.pos_loss(pos, labels["pos"])
             train_yaw_loss = self.yaw_loss(yaw, labels["yaw_encode"])
             train_pitch_loss = self.pitch_loss(pitch, labels["pitch_encode"])
             train_roll_loss = self.roll_loss(roll, labels["roll_encode"])
-            # train_ori_loss = self.ori_loss(ori_decode, labels["ori"])
+            train_ori_loss = self.ori_loss(ori_decode, labels["ori"])
 
-        train_loss = self.BETA[0] * train_pos_loss + self.BETA[1] * (train_yaw_loss + train_pitch_loss + train_roll_loss)# + self.BETA[2] * train_ori_loss
+        train_loss = self.BETA[0] * train_pos_loss + self.BETA[1] * (train_yaw_loss + train_pitch_loss + train_roll_loss) + self.BETA[2] * train_ori_loss
 
         self.train_pos_loss.update(train_pos_loss, num)
         self.train_yaw_loss.update(train_yaw_loss, num)
         self.train_pitch_loss.update(train_pitch_loss, num)
         self.train_roll_loss.update(train_roll_loss, num)
-        # self.train_ori_loss.update(train_ori_loss, num)
+        self.train_ori_loss.update(train_ori_loss, num)
         self.train_loss.update(train_loss, num)
         return train_loss
 
@@ -154,17 +154,17 @@ class LightningMobileSPEEDv3(L.LightningModule):
             val_pitch_loss = self.pitch_loss(pitch, labels["pitch_encode"])
             val_roll_loss = self.roll_loss(roll, labels["roll_encode"])
             ori_decode = self.ori_encoder_decoder.decode_ori_batch(yaw, pitch, roll)
-            # val_ori_loss = self.ori_loss(ori_decode, labels["ori"])
+            val_ori_loss = self.ori_loss(ori_decode, labels["ori"])
             self.ori_error.update(ori_decode, labels["ori"])
             self.pos_error.update(pos, labels["pos"])
 
-        val_loss = self.BETA[0] * val_pos_loss + self.BETA[1] * (val_yaw_loss + val_pitch_loss + val_roll_loss)# + self.BETA[2] * val_ori_loss
+        val_loss = self.BETA[0] * val_pos_loss + self.BETA[1] * (val_yaw_loss + val_pitch_loss + val_roll_loss) + self.BETA[2] * val_ori_loss
         # 计算指标
         self.val_pos_loss.update(val_pos_loss, num)
         self.val_yaw_loss.update(val_yaw_loss, num)
         self.val_pitch_loss.update(val_pitch_loss, num)
         self.val_roll_loss.update(val_roll_loss, num)
-        # self.val_ori_loss.update(val_ori_loss, num)
+        self.val_ori_loss.update(val_ori_loss, num)
         self.val_loss.update(val_loss, num)
         
         

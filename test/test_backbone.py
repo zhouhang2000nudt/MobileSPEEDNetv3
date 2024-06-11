@@ -12,7 +12,7 @@ from MobileSPEEDNetv3.utils.config import get_config
 
 
 def profile_model(model):
-    flops, params = get_model_complexity_info(model, (3, 240, 384), as_strings=True, print_per_layer_stat=False, verbose=False, flops_units="GMac", param_units="M", output_precision=10)
+    flops, params = get_model_complexity_info(model, (3, 480, 768), as_strings=True, print_per_layer_stat=False, verbose=False, flops_units="GMac", param_units="M", output_precision=10)
     print(flops)
     print(params)
 
@@ -30,7 +30,7 @@ config = get_config()
 config["pretrained"] = False
 full_model = Mobile_SPEEDv3(config)
 for name, module in full_model.named_modules():
-    if "stochastic_depth" in name:
+    if isinstance(module, torch.nn.ReLU):
         print(name)
         print(module)
 full_model.eval()

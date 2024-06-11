@@ -31,7 +31,6 @@ stride: 5                            # 步长 度
 n: 3                                # neighbor/tau
 s: 0.1                              # ratio/sigma
 
-
 # ==========================model==========================
 backbone: mobilenet_v3_large                      # EfficientNet
 pos_dim: 3                              # 位置维度
@@ -39,11 +38,11 @@ pretrained: true
 deform_layers: []
 neck: FPNPAN                            # FPNPAN/BiFPN/AFPN
 expand_ratio: [1, 1, 1]                 # 扩张率
-pool_size: [3, 2, 1]                # 池化尺寸
+pool_size: [4, 2, 1]                # 池化尺寸
 
 # ==========================loss===========================
 ALPHA: [1, 5]                       # Score = ALPHA[0] * POS_Error + ALPHA[1] * Euler_Error
-BETA: [1, 8, 0]                  # Loss = BETA[0] * POS_LOSS + BETA[1] * Euler_LOSS + BETA[2] * CLS_LOSS
+BETA: [1, 8, 5]                  # Loss = BETA[0] * POS_LOSS + BETA[1] * Euler_LOSS + BETA[2] * CLS_LOSS
 pos_loss: MSE                       # 位置损失函数 MAE/MSE/Huber/Log_Cosh (regression loss)
 euler_loss: CrossEntropy              # 姿态值损失函数 CrossEntropy/Focal
 ori_loss: Arccos

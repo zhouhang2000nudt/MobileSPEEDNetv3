@@ -100,8 +100,8 @@ class SPPF(nn.Module):
     def __init__(self, in_channels: int, out_channels: int, k: int = 5):
         super(SPPF, self).__init__()
         c_ = in_channels // 2
-        self.conv1 = Conv2dNormActivation(in_channels=in_channels, out_channels=c_, kernel_size=1, stride=1, bias=False)
-        self.conv2 = Conv2dNormActivation(in_channels=c_*4, out_channels=out_channels, kernel_size=1, stride=1, bias=False)
+        self.conv1 = Conv2dNormActivation(in_channels=in_channels, out_channels=c_, kernel_size=1, stride=1, bias=False, activation_layer=nn.Mish)
+        self.conv2 = Conv2dNormActivation(in_channels=c_*4, out_channels=out_channels, kernel_size=1, stride=1, bias=False, activation_layer=nn.Mish)
         self.pool = nn.MaxPool2d(kernel_size=k, stride=1, padding=k//2)
     
     def forward(self, x):
@@ -124,22 +124,18 @@ class FPNPAN(nn.Module):
         self.UpSample = nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
         self.fuse_mode = fuse_mode
         
-        if fuse_mode == "cat":
-            fused_channel_p45 = in_channels[1] + in_channels[2]
-            fused_channel_p34 = in_channels[0] + in_channels[1]
-        elif fuse_mode == "add":
-            raise NotImplementedError("Not implemented yet")
-            pass
+        fused_channel_p45 = in_channels[1] + in_channels[2]
+        fused_channel_p34 = in_channels[0] + in_channels[1]
         
         # 上采样通路
         self.p4_fuseconv_up = C2f(fused_channel_p45, in_channels[1])
         self.p3_fuseconv_up = C2f(fused_channel_p34, in_channels[0])
         
         # 下采样通路
-        self.p3_downconv_down = ConvBnAct(in_channels=in_channels[0], out_channels=in_channels[0], kernel_size=3, stride=2, act_layer=nn.SiLU)
+        self.p3_downconv_down = ConvBnAct(in_channels=in_channels[0], out_channels=in_channels[0], kernel_size=3, stride=2, act_layer=nn.Mish)
         
         self.p4_fuseconv_down = C2f(fused_channel_p34, in_channels[1])
-        self.p4_downconv_down = ConvBnAct(in_channels=in_channels[1], out_channels=in_channels[1], kernel_size=3, stride=2, act_layer=nn.SiLU)
+        self.p4_downconv_down = ConvBnAct(in_channels=in_channels[1], out_channels=in_channels[1], kernel_size=3, stride=2, act_layer=nn.Mish)
         
         self.p5_fuseconv_down = C2f(fused_channel_p45, in_channels[2])
     
@@ -147,21 +143,59 @@ class FPNPAN(nn.Module):
         p3, p4, p5 = x      # in: 40, 60, 96; p4: 112, 30, 48; p5: 160, 15, 24
         
         # 上采样通路
-        if self.fuse_mode == "cat":
-            p4_fused_up = self.p4_fuseconv_up(torch.cat([F.interpolate(p5, size=p4.shape[2:], mode="bilinear", align_corners=True), p4], dim=1)) # 112, 30, 48
-        
-        if self.fuse_mode == "cat":
-            p3_fused_up = self.p3_fuseconv_up(torch.cat([F.interpolate(p4_fused_up, size=p3.shape[2:], mode="bilinear", align_corners=True), p3], dim=1)) # 40, 60, 96    out
+        p4_fused_up = self.p4_fuseconv_up(torch.cat([F.interpolate(p5, size=p4.shape[2:], mode="bilinear", align_corners=True), p4], dim=1)) # 112, 30, 48
+
+        p3_fused_up = self.p3_fuseconv_up(torch.cat([F.interpolate(p4_fused_up, size=p3.shape[2:], mode="bilinear", align_corners=True), p3], dim=1)) # 40, 60, 96    out
         
         # 下采样通路
-        if self.fuse_mode == "cat":
-            p4_fused_down = self.p4_fuseconv_down(torch.cat([self.p3_downconv_down(p3_fused_up), p4_fused_up], dim=1)) # 112, 30, 48    out
+        p4_fused_down = self.p4_fuseconv_down(torch.cat([self.p3_downconv_down(p3_fused_up), p4_fused_up], dim=1)) # 112, 30, 48    out
         
-        if self.fuse_mode == "cat":
-            p5_fused_down = self.p5_fuseconv_down(torch.cat([self.p4_downconv_down(p4_fused_down), p5], dim=1)) # 160, 15, 24    out
+        p5_fused_down = self.p5_fuseconv_down(torch.cat([self.p4_downconv_down(p4_fused_down), p5], dim=1)) # 160, 15, 24    out
         
         return p3_fused_up, p4_fused_down, p5_fused_down
 
+
+class TriFPN(nn.Module):
+    def __init__(self, in_channels: List[int], fuse_mode: str = "cat"):
+        super(TriFPN, self).__init__()
+        self.UpSample = nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+        self.fuse_mode = fuse_mode
+        
+        fused_channel_p345_up = in_channels[1] + in_channels[2] + in_channels[3]
+        fused_channel_p234_up = in_channels[0] + in_channels[1] + in_channels[2]
+        fused_channel_p45_down = in_channels[2] + in_channels[3]
+        fused_channel_p34_down = in_channels[1] + in_channels[2]
+        
+        # 上采样通路
+        self.p3_downconv_up = ConvBnAct(in_channels=in_channels[1], out_channels=in_channels[1], kernel_size=3, stride=2, dilation=2, act_layer=nn.Mish)
+        self.p5_upconv_up = ConvBnAct(in_channels=in_channels[3], out_channels=in_channels[3], kernel_size=1, stride=1, act_layer=nn.Mish)
+        self.p4_fuseconv_up = C2f(fused_channel_p345_up, in_channels[2])
+        self.p2_downconv_up = ConvBnAct(in_channels=in_channels[0], out_channels=in_channels[0], kernel_size=3, stride=2, dilation=2, act_layer=nn.Mish)
+        self.p4_upconv_up = ConvBnAct(in_channels=in_channels[2], out_channels=in_channels[2], kernel_size=1, stride=1, act_layer=nn.Mish)
+        self.p3_fuseconv_up = C2f(fused_channel_p234_up, in_channels[1])
+        
+        # 下采样通路
+        self.p3_downconv_down = ConvBnAct(in_channels=in_channels[1], out_channels=in_channels[1], kernel_size=3, stride=2, act_layer=nn.Mish)
+        
+        self.p4_fuseconv_down = C2f(fused_channel_p34_down, in_channels[2])
+        self.p4_downconv_down = ConvBnAct(in_channels=in_channels[2], out_channels=in_channels[2], kernel_size=3, stride=2, act_layer=nn.Mish)
+        
+        self.p5_fuseconv_down = C2f(fused_channel_p45_down, in_channels[3])
+    
+    def forward(self, x):
+        p2, p3, p4, p5 = x      # in: 40, 60, 96; p4: 112, 30, 48; p5: 160, 15, 24
+        
+        # 上采样通路
+        p4_fused_up = self.p4_fuseconv_up(torch.cat([self.p3_downconv_up(p3), p4, F.interpolate(self.p5_upconv_up(p5), size=p4.shape[2:], mode="bilinear", align_corners=True)], dim=1)) # 112, 30, 48
+
+        p3_fused_up = self.p3_fuseconv_up(torch.cat([self.p2_downconv_up(p2), p3, F.interpolate(self.p4_upconv_up(p4_fused_up), size=p3.shape[2:], mode="bilinear", align_corners=True)], dim=1)) # 40, 60, 96    out
+        
+        # 下采样通路
+        p4_fused_down = self.p4_fuseconv_down(torch.cat([self.p3_downconv_down(p3_fused_up), p4_fused_up], dim=1)) # 112, 30, 48    out
+        
+        p5_fused_down = self.p5_fuseconv_down(torch.cat([self.p4_downconv_down(p4_fused_down), p5], dim=1)) # 160, 15, 24    out
+        
+        return p3_fused_up, p4_fused_down, p5_fused_down
 
 # ================== neck end ==================
 
@@ -211,8 +245,8 @@ class Head(nn.Module):
             nn.Linear(in_features, in_features),
             nn.Mish(inplace=True),
         )
-        self.pos_hide_features = int(in_features * 0.25)
-        self.ori_hide_features = in_features - self.pos_hide_features
+        self.pos_hide_features = int(in_features * 0.5)
+        self.ori_hide_features = in_features
         self.pos_fc = nn.Sequential(
             nn.Linear(self.pos_hide_features, pos_dim),
         )
@@ -231,7 +265,9 @@ class Head(nn.Module):
     
     def forward(self, x):
         x = self.fc(x)
-        pos_feature, ori_feature = torch.split(x, [self.pos_hide_features, self.ori_hide_features], dim=1)
+        # pos_feature, ori_feature = torch.split(x, [self.pos_hide_features, self.ori_hide_features], dim=1)
+        pos_feature = x[:, :self.pos_hide_features]
+        ori_feature = x
         pos = self.pos_fc(pos_feature)
         yaw = self.yaw_fc(ori_feature)
         pitch = self.pitch_fc(ori_feature)

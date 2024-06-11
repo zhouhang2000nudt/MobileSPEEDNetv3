@@ -216,7 +216,7 @@ def prepare_Speed(config: dict):
     
     # 采样列表
     if config["debug"]:
-        Speed.img_name = list(Speed.labels.keys())[:100]
+        Speed.img_name = list(Speed.labels.keys())[:1000]
     else:
         Speed.img_name = list(Speed.labels.keys())
     num = len(Speed.img_name)
@@ -268,8 +268,8 @@ class Speed(Dataset):
     labels: dict            # 标签字典
     test_labels: dict       # 测试集标签字典
     config: dict            # 配置字典
-    img_name: list     # 样本id列表
-    transform: dict   # 数据转化方法字典
+    img_name: list          # 样本id列表
+    transform: dict         # 数据转化方法字典
     train_index: Subset     # 训练集图片名列表
     val_index: Subset       # 验证集图片名列表
     test_index: list        # 测试集图片名列表
@@ -307,7 +307,7 @@ class Speed(Dataset):
                 bbox[3] = 1199
             
         
-        ori = np.array(self.labels[filename]["ori"])   # 姿态
+        ori = np.array(self.labels[filename]["ori"]) / np.linalg.norm(self.labels[filename]["ori"])   # 姿态
         pos = np.array(self.labels[filename]["pos"])   # 位置
         
         

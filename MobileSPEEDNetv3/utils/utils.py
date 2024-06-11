@@ -113,10 +113,10 @@ def rotate_image(image, pos, ori, SK, SK_inv, rot_max_magnitude):
 
     image = np.array(image)
 
-    change = (np.random.rand(1)-0.5) * rot_max_magnitude
+    change = np.random.uniform(-rot_max_magnitude, rot_max_magnitude)
 
     # r_change = rpy2r(change, 0, 0, order='xyz', unit='deg')
-    rotation = R.from_euler('YXZ', [0, 0, change[0]], degrees=True)
+    rotation = R.from_euler('YXZ', [0, 0, change], degrees=True)
     r_change = rotation.as_matrix()
     
 
@@ -144,7 +144,7 @@ def rotate_cam(image, pos, ori, SK, SK_inv, rot_max_magnitude):
 
     image = np.array(image)
 
-    change = (np.random.rand(3)-0.5) * rot_max_magnitude
+    change = np.random.uniform(-rot_max_magnitude, rot_max_magnitude, 3)
 
     # r_change = rpy2r(change, 0, 0, order='xyz', unit='deg')
     rotation = R.from_euler('YXZ', change, degrees=True)

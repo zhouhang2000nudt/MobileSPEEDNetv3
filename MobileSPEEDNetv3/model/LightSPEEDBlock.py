@@ -46,8 +46,8 @@ class C2f(nn.Module):
         """
         super(C2f, self).__init__()
         self.c = int(c2 * e)  # hidden channels
-        self.cv1 = ConvBnAct(c1, 2 * self.c, kernel_size=1, stride=1, act_layer=nn.SiLU)
-        self.cv2 = ConvBnAct((2 + n) * self.c, c2, kernel_size=1, act_layer=nn.SiLU)
+        self.cv1 = ConvBnAct(c1, 2 * self.c, kernel_size=1, stride=1, act_layer=nn.Mish)
+        self.cv2 = ConvBnAct((2 + n) * self.c, c2, kernel_size=1, act_layer=nn.Mish)
         self.m = nn.ModuleList(Bottleneck(self.c, self.c, shortcut, g, k=[[3, 3], [3, 3]], e=1.0) for _ in range(n))
 
     def forward(self, x):
