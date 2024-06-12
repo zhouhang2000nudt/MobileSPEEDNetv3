@@ -50,8 +50,8 @@ ori_loss: Arccos
 optimizer: AdamW       # 优化器 Adam/SGD/AdamW
 lr0: 0.0005            # 初始学习率
 momentum: 0.937       # 动量
-weight_decay: 0.0001    # 权重衰减
-epoch: 200            # 训练轮数
+weight_decay: 0.00001    # 权重衰减
+epoch: 300            # 训练轮数
 batch_size: 30        # 批次大小
 
 precision: mix        # 训练精度 half/mix/double/full/int8
