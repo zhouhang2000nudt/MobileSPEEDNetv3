@@ -319,39 +319,43 @@ class RSC(nn.Module):
 class Head(nn.Module):
     def __init__(self, in_features: int, pos_dim: int, yaw_dim: int, pitch_dim: int, roll_dim: int):
         super(Head, self).__init__()
-        features_hide = 1200
         self.fc = nn.Sequential(
-            nn.Linear(in_features, features_hide),
+            nn.Linear(in_features, in_features),
             nn.Mish(inplace=True),
         )
-        self.pos_hide_features = int(features_hide * 0.2)
-        self.ori_hide_features = int(features_hide * 0.2)
-        self.ori_share_features = int(features_hide * 0.2)
+        self.weight_fc = nn.Sequential(
+            nn.Linear(in_features, in_features // 4),
+            nn.ReLU(inplace=True),
+            nn.Linear(in_features // 4, in_features),
+            nn.Sigmoid(),
+        )
+        self.pos_hide_features = int(in_features * 0.25)
+        self.ori_hide_features = in_features - self.pos_hide_features
         self.pos_fc = nn.Sequential(
             nn.Linear(self.pos_hide_features, pos_dim),
         )
         self.yaw_fc = nn.Sequential(
-            nn.Linear(self.ori_share_features + self.ori_hide_features, yaw_dim),
+            nn.Linear(self.ori_hide_features, yaw_dim),
             nn.Softmax(dim=1),
         )
         self.pitch_fc = nn.Sequential(
-            nn.Linear(self.ori_share_features + self.ori_hide_features, pitch_dim),
+            nn.Linear(self.ori_hide_features, pitch_dim),
             nn.Softmax(dim=1),
         )
         self.roll_fc = nn.Sequential(
-            nn.Linear(self.ori_share_features + self.ori_hide_features, roll_dim),
+            nn.Linear(self.ori_hide_features, roll_dim),
             nn.Softmax(dim=1),
         )
     
     def forward(self, x):
-        x = self.fc(x)
-        pos_feature, ori_shared_feature, yaw_feature, pitch_feature, roll_feature = torch.chunk(x, 5, dim=1)
+        x = self.fc(x * self.weight_fc(x))
+        pos_feature, ori_feature = torch.split(x, [self.pos_hide_features, self.ori_hide_features], dim=1)
         # pos_feature = x[:, :self.pos_hide_features]
         # ori_feature = x
         pos = self.pos_fc(pos_feature)
-        yaw = self.yaw_fc(torch.cat([ori_shared_feature, yaw_feature], dim=1))
-        pitch = self.pitch_fc(torch.cat([ori_shared_feature, pitch_feature], dim=1))
-        roll = self.roll_fc(torch.cat([ori_shared_feature, roll_feature], dim=1))
+        yaw = self.yaw_fc(ori_feature)
+        pitch = self.pitch_fc(ori_feature)
+        roll = self.roll_fc(ori_feature)
         return pos, yaw, pitch, roll
 
 class RepECPHead(nn.Sequential):

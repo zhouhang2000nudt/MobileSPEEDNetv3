@@ -43,7 +43,7 @@ class Mobile_SPEEDv3(nn.Module):
                 if "stochastic_depth" in name:
                     path = name.split(".")
                     self.features[int(path[0])][int(path[1])].stochastic_depth = nn.Identity()
-                    
+        
         
         for deform_layer in config["deform_layers"]:
             InvertedResidual = self.features[deform_layer]
