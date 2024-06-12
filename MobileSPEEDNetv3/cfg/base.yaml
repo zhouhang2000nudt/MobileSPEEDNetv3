@@ -1,6 +1,6 @@
 # =================global configuration====================
 name: euler-encode
-seed: 19520311
+seed: 42
 split: [0.85, 0.15]     # train val
 bar: rich               # 进度条 rich/tqdm
 accelerator: gpu        # 训练设备 cpu/gpu
@@ -27,8 +27,8 @@ resize_first: false    # 是否先resize
 
 # =======================encoder-decoder===================
 encoder: Linear                     # Linear/Gauss
-stride: 5                            # 步长 度
-n: 3                                # neighbor/tau
+stride: 2                            # 步长 度
+n: 5                                # neighbor/tau
 s: 0.1                              # ratio/sigma
 
 # ==========================model==========================
@@ -36,8 +36,7 @@ backbone: mobilenet_v3_large                      # EfficientNet
 pos_dim: 3                              # 位置维度
 pretrained: true
 deform_layers: []
-neck: FPNPAN                            # FPNPAN/BiFPN/AFPN
-expand_ratio: [1, 1, 1]                 # 扩张率
+neck: TriFPNAtt                            # FPNPAN/BiFPN/AFPN
 pool_size: [4, 2, 1]                # 池化尺寸
 
 # ==========================loss===========================

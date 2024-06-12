@@ -4,7 +4,7 @@ import torch.nn as nn
 from typing import List, Union
 from torch import Tensor
 
-from .block import SPPF, FPNPAN, RepECPHead, Conv2dNormActivation, DCNv2, TriFPN
+from .block import SPPF, FPNPAN, RepECPHead, Conv2dNormActivation, DCNv2, TriFPN, TriFPNAtt
 from torchvision.models import mobilenet_v3_large, MobileNet_V3_Large_Weights, mobilenet_v3_small, MobileNet_V3_Small_Weights
 from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
 
@@ -65,12 +65,15 @@ class Mobile_SPEEDv3(nn.Module):
             self.neck = FPNPAN(in_channels=neck_in_channels)
         elif config["neck"] == "TriFPN":
             self.stage = [4, 7, 13]
-            neck_in_channels = [24, 40, 112, 320]
+            neck_in_channels = [24, 40, 112, 160]
             self.neck = TriFPN(in_channels=neck_in_channels)
+        elif config["neck"] == "TriFPNAtt":
+            self.stage = [4, 7, 13]
+            neck_in_channels = [24, 40, 112, 160]
+            self.neck = TriFPNAtt(in_channels=neck_in_channels)
             
         
-        self.head = RepECPHead(in_channels=neck_out_channels, 
-                                expand_ratio=config["expand_ratio"],
+        self.head = RepECPHead(in_channels=neck_out_channels,
                                 pool_size=config["pool_size"],
                                 pos_dim=config["pos_dim"],
                                 yaw_dim=int(360 // config["stride"] + 1 + 2 * config["n"]),
