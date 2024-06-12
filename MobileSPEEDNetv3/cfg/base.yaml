@@ -78,8 +78,8 @@ Rotate:
   p: 0.8             # p为图片旋转的概率，(1-p)为相机旋转的概率
   Rotate_img: true
   Rotate_cam: true
-  img_angle: 180
-  cam_angle: 20
+  img_angle: 90
+  cam_angle: 10
 
 Resize:
   p: 0.5

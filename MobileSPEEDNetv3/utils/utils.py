@@ -106,14 +106,17 @@ def clamp(bbox):
     return bbox
 
 
-def rotate_image(image, pos, ori, SK, SK_inv, rot_max_magnitude):
+def rotate_image(image, pos, ori, SK, SK_inv, rot_max_magnitude, rot_angle = None):
     """Data augmentation: rotate image and adapt position/orientation.
     Rotation amplitude is randomly picked from [-rot_max_magnitude/2, +rot_max_magnitude/2]
     """
 
     image = np.array(image)
 
-    change = np.random.uniform(-rot_max_magnitude, rot_max_magnitude)
+    if rot_angle is None:
+        change = np.random.uniform(-rot_max_magnitude, rot_max_magnitude)
+    else:
+        change = rot_angle
 
     # r_change = rpy2r(change, 0, 0, order='xyz', unit='deg')
     rotation = R.from_euler('YXZ', [0, 0, change], degrees=True)

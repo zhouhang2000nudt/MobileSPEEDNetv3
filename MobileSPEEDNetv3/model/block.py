@@ -348,7 +348,7 @@ class Head(nn.Module):
         )
     
     def forward(self, x):
-        x = self.fc(x * self.weight_fc(x))
+        x = self.fc(x) * self.weight_fc(x)
         pos_feature, ori_feature = torch.split(x, [self.pos_hide_features, self.ori_hide_features], dim=1)
         # pos_feature = x[:, :self.pos_hide_features]
         # ori_feature = x

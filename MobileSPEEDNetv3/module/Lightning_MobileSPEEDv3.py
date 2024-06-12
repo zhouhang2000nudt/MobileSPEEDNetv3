@@ -83,15 +83,17 @@ class LightningMobileSPEEDv3(L.LightningModule):
             train_roll_loss = self.roll_loss(roll_1, roll_2)
             # train_ori_loss = self.ori_loss(ori_decode_1, ori_decode_2)
         else:
-            inputs, labels = batch
+            inputs, inputs_180, labels = batch
+            # 合并输入
+            inputs = torch.cat([inputs, inputs_180], dim=0)
             num = inputs.shape[0]
             pos, yaw, pitch, roll = self(inputs)
             ori_decode = self.ori_encoder_decoder.decode_ori_batch(yaw, pitch, roll)
-            train_pos_loss = self.pos_loss(pos, labels["pos"])
-            train_yaw_loss = self.yaw_loss(yaw, labels["yaw_encode"])
-            train_pitch_loss = self.pitch_loss(pitch, labels["pitch_encode"])
-            train_roll_loss = self.roll_loss(roll, labels["roll_encode"])
-            train_ori_loss = self.ori_loss(ori_decode, labels["ori"])
+            train_pos_loss = self.pos_loss(pos, torch.cat([labels["pos"], labels["pos_180"]], dim=0))
+            train_yaw_loss = self.yaw_loss(yaw, torch.cat([labels["yaw_encode"], labels["yaw_encode_180"]], dim=0))
+            train_pitch_loss = self.pitch_loss(pitch, torch.cat([labels["pitch_encode"], labels["pitch_encode_180"]], dim=0))
+            train_roll_loss = self.roll_loss(roll, torch.cat([labels["roll_encode"], labels["roll_encode_180"]], dim=0))
+            train_ori_loss = self.ori_loss(ori_decode, torch.cat([labels["ori"], labels["ori_180"]], dim=0))
 
         train_loss = self.BETA[0] * train_pos_loss + self.BETA[1] * (train_yaw_loss + train_pitch_loss + train_roll_loss) + self.BETA[2] * train_ori_loss
 
