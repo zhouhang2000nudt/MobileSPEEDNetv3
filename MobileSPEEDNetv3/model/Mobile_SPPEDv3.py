@@ -14,6 +14,8 @@ class Mobile_SPEEDv3(nn.Module):
     def __init__(self, config: dict):
         super(Mobile_SPEEDv3, self).__init__()
         
+        self.expand2rgb_conv = Conv2dNormActivation(1, 3, kernel_size=3, stride=1, padding=1, activation_layer=nn.Mish, bias=True)
+        
         if config["backbone"] == "mobilenet_v3_large":
             if config["pretrained"]:
                 self.features = mobilenet_v3_large(weights = MobileNet_V3_Large_Weights.DEFAULT).features[:-1]
@@ -29,34 +31,6 @@ class Mobile_SPEEDv3(nn.Module):
                 if isinstance(module, Conv2dNormActivation):
                     if len(module) == 3:
                         module[2] = nn.Mish()
-        elif config["backbone"] == "EfficientNet":
-            if config["pretrained"]:
-                self.features = efficientnet_b0(weights = EfficientNet_B0_Weights.DEFAULT).features[:-1]
-            else:
-                self.features = efficientnet_b0().features[:-1]
-            self.stage = [4, 6]
-            SPPF_in_channels = [40, 112, 320]
-            SPPF_out_channels = [40, 112, 320]
-            neck_in_channels = SPPF_out_channels
-            neck_out_channels = neck_in_channels
-            for name, module in self.features.named_modules():
-                if "stochastic_depth" in name:
-                    path = name.split(".")
-                    self.features[int(path[0])][int(path[1])].stochastic_depth = nn.Identity()
-        
-        
-        for deform_layer in config["deform_layers"]:
-            InvertedResidual = self.features[deform_layer]
-            in_channels = InvertedResidual.block[0][0].in_channels
-            out_channels = InvertedResidual.block[-1][0].out_channels
-            kernel_size = InvertedResidual.block[1][0].kernel_size
-            stride = InvertedResidual.block[1][0].stride
-            self.features[deform_layer] = DCNv2(
-                in_channels=in_channels,
-                out_channels=out_channels,
-                kernel_size=kernel_size[0],
-                stride=stride[0]
-            )
         
         self.SPPF_p5 = SPPF(in_channels=SPPF_in_channels,
                             out_channels=SPPF_out_channels)
@@ -81,6 +55,7 @@ class Mobile_SPEEDv3(nn.Module):
                                 roll_dim=int(360 // config["stride"] + 1 + 2 * config["n"]))
     
     def forward(self, x: Tensor):
+        x = self.expand2rgb_conv(x)
         features = [self.features[:self.stage[0]](x)]
         for i in range(len(self.stage)-1):
             features.append(self.features[self.stage[i]:self.stage[i+1]](features[-1]))
@@ -92,15 +67,3 @@ class Mobile_SPEEDv3(nn.Module):
         
         pos, yaw, pitch, roll = self.head(features)
         return pos, yaw, pitch, roll
-
-    def switch_repvggplus_to_deploy(self):
-        for m in self.modules():
-            if hasattr(m, 'switch_to_deploy'):
-                m.switch_to_deploy()
-        if hasattr(self, 'stage1_aux'):
-            self.__delattr__('stage1_aux')
-        if hasattr(self, 'stage2_aux'):
-            self.__delattr__('stage2_aux')
-        if hasattr(self, 'stage3_first_aux'):
-            self.__delattr__('stage3_first_aux')
-        self.deploy = True

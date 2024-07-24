@@ -19,15 +19,15 @@ self_supervised: false
 
 # =========================dataset=========================
 data_dir: ../datasets/speed     # 数据路径
-workers: 20            # dataloader workers
-ram: true            # 是否使用内存加载数据
+workers: 10            # dataloader workers
+ram: false            # 是否使用内存加载数据
 imgsz: [480, 768]     # 图片大小 [480, 768]
 resize_first: false    # 是否先resize
 
 
 # =======================encoder-decoder===================
 encoder: Linear                     # Linear/Gauss
-stride: 2                            # 步长 度
+stride: 1                            # 步长 度
 n: 5                                # neighbor/tau
 s: 0.1                              # ratio/sigma
 
@@ -35,7 +35,6 @@ s: 0.1                              # ratio/sigma
 backbone: mobilenet_v3_large                      # EfficientNet
 pos_dim: 3                              # 位置维度
 pretrained: true
-deform_layers: []
 neck: TriFPNAtt                            # FPNPAN/BiFPN/AFPN
 pool_size: [4, 2, 1]                # 池化尺寸
 
@@ -51,8 +50,8 @@ optimizer: AdamW       # 优化器 Adam/SGD/AdamW
 lr0: 0.0005            # 初始学习率
 momentum: 0.937       # 动量
 weight_decay: 0.00001    # 权重衰减
-epoch: 300            # 训练轮数
-batch_size: 30        # 批次大小
+epoch: 500            # 训练轮数
+batch_size: 8        # 批次大小
 
 precision: mix        # 训练精度 half/mix/double/full/int8
 accumulate_grad_batches: 1            # 累计梯度批次
@@ -78,7 +77,7 @@ Rotate:
   p: 0.8             # p为图片旋转的概率，(1-p)为相机旋转的概率
   Rotate_img: true
   Rotate_cam: true
-  img_angle: 90
+  img_angle: 180
   cam_angle: 10
 
 Resize:

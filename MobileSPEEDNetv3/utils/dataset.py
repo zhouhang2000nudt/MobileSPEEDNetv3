@@ -403,19 +403,6 @@ class Speed(Dataset):
                 ori = ori_warpped
                 bbox = list(map(int, bbox_warpped))
         
-        # 旋转180度
-        if "train" in self.mode:
-            image_warpped, pos_warpped, ori_warpped, M_warpped = rotate_image(image, pos, ori, Speed.camera.SK, Speed.camera.SK_inv, Speed.config["Rotate"]["img_angle"], 180)
-            bbox_warpped = warp_boxes(np.array([bbox]), M_warpped, height=image.shape[0], width=image.shape[1]).tolist()[0]
-            image_180 = image_warpped
-            pos_180 = pos_warpped
-            ori_180 = ori_warpped
-            bbox_180 = list(map(int, bbox_warpped))
-        
-        
-        image = cv.cvtColor(image, cv.COLOR_GRAY2RGB)       # 转换为RGB格式
-        if "train" in self.mode:
-            image_180 = cv.cvtColor(image_180, cv.COLOR_GRAY2RGB)
         
         if "self_supervised" in self.mode:
             image_1 = self.transform(image_1)       # (1, 480, 768)
@@ -427,17 +414,9 @@ class Speed(Dataset):
             transformed = self.Resize(image=image, bboxes=[bbox], category_ids=[1], interpolation=cv.INTER_LINEAR)
             image = transformed["image"]
             bbox = list(map(int, list(transformed["bboxes"][0])))
-            if "train" in self.mode:
-                transformed = self.Resize(image=image_180, bboxes=[bbox_180], category_ids=[1], interpolation=cv.INTER_LINEAR)
-                image_180 = transformed["image"]
-                bbox_180 = list(map(int, list(transformed["bboxes"][0])))
-            
+        
         image = self.transform(image)       # (3, 480, 768)
         yaw_encode, pitch_encode, roll_encode = Speed.ori_encoder_decoder.encode_ori(ori)
-        
-        if "train" in self.mode:
-            image_180 = self.transform(image_180)       # (3, 480, 768)
-            yaw_encode_180, pitch_encode_180, roll_encode_180 = Speed.ori_encoder_decoder.encode_ori(ori_180)
         
         y: dict = {
             "filename": filename,
@@ -448,14 +427,6 @@ class Speed(Dataset):
             "roll_encode": roll_encode,
             "bbox": bbox
         }
-        
-        if "train" in self.mode:
-            y["pos_180"] = pos_180
-            y["ori_180"] = ori_180
-            y["yaw_encode_180"] = yaw_encode_180
-            y["pitch_encode_180"] = pitch_encode_180
-            y["roll_encode_180"] = roll_encode_180
-            return image, image_180, y
 
         return image, y
 

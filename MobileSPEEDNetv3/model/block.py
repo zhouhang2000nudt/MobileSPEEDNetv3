@@ -6,7 +6,6 @@ import math
 from typing import List, Union
 from .RepVGG import RepVGGplusBlock
 from torchvision.ops import Conv2dNormActivation
-from torchvision.models.mobilenetv3 import InvertedResidual, InvertedResidualConfig
 from torchvision.models.efficientnet import FusedMBConv, FusedMBConvConfig
 from torchvision.models.efficientnet import MBConv, MBConvConfig
 from .LightSPEEDBlock import C2f
@@ -170,18 +169,22 @@ class TriFPN(nn.Module):
         # 上采样通路
         self.p3_downconv_up = ConvBnAct(in_channels=in_channels[1], out_channels=in_channels[1], kernel_size=3, stride=2, dilation=2, act_layer=nn.Mish)
         self.p5_upconv_up = ConvBnAct(in_channels=in_channels[3], out_channels=in_channels[3], kernel_size=1, stride=1, act_layer=nn.Mish)
-        self.p4_fuseconv_up = C2f(fused_channel_p345_up, in_channels[2])
+        # self.p4_fuseconv_up = C2f(fused_channel_p345_up, in_channels[2])
+        self.p4_fuseconv_up = InvertedResidual(fused_channel_p345_up, in_channels[2], exp_ratio=8, act_layer=nn.Mish)
         self.p2_downconv_up = ConvBnAct(in_channels=in_channels[0], out_channels=in_channels[0], kernel_size=3, stride=2, dilation=2, act_layer=nn.Mish)
         self.p4_upconv_up = ConvBnAct(in_channels=in_channels[2], out_channels=in_channels[2], kernel_size=1, stride=1, act_layer=nn.Mish)
-        self.p3_fuseconv_up = C2f(fused_channel_p234_up, in_channels[1])
+        # self.p3_fuseconv_up = C2f(fused_channel_p234_up, in_channels[1])
+        self.p3_fuseconv_up = InvertedResidual(fused_channel_p234_up, in_channels[1], exp_ratio=8, act_layer=nn.Mish)
         
         # 下采样通路
         self.p3_downconv_down = ConvBnAct(in_channels=in_channels[1], out_channels=in_channels[1], kernel_size=3, stride=2, act_layer=nn.Mish)
         
-        self.p4_fuseconv_down = C2f(fused_channel_p34_down, in_channels[2])
+        # self.p4_fuseconv_down = C2f(fused_channel_p34_down, in_channels[2])
+        self.p4_fuseconv_down = InvertedResidual(fused_channel_p34_down, in_channels[2], exp_ratio=8, act_layer=nn.Mish)
         self.p4_downconv_down = ConvBnAct(in_channels=in_channels[2], out_channels=in_channels[2], kernel_size=3, stride=2, act_layer=nn.Mish)
         
-        self.p5_fuseconv_down = C2f(fused_channel_p45_down, in_channels[3])
+        # self.p5_fuseconv_down = C2f(fused_channel_p45_down, in_channels[3])
+        self.p5_fuseconv_down = InvertedResidual(fused_channel_p45_down, in_channels[3], exp_ratio=8, act_layer=nn.Mish)
     
     def forward(self, x):
         p2, p3, p4, p5 = x      # in: 40, 60, 96; p4: 112, 30, 48; p5: 160, 15, 24
@@ -215,7 +218,7 @@ class ChannelWeight(nn.Module):
         b, c, _, _ = x.size()
         y_avg = self.AvgPool(x).view(b, c)
         y_max = self.MaxPoll(x).view(b, c)
-        weight = F.sigmoid(self.fc(y_avg) + self.fc(y_max)).view(b, self.out_channels, 1, 1)
+        weight = F.sigmoid(self.fc(0.5*y_avg+0.5*y_max)).view(b, self.out_channels, 1, 1)
         return weight
 
 
@@ -249,19 +252,23 @@ class TriFPNAtt(nn.Module):
         self.p32P5_weight = SpatialWeight(in_channels=in_channels[1])
         self.p52p3_weight = ChannelWeight(in_channels=in_channels[3], out_channels=in_channels[1])
         self.p3_downconv_up = ConvBnAct(in_channels=in_channels[1], out_channels=in_channels[1], kernel_size=3, stride=2, act_layer=nn.Mish)
-        self.p4_fuseconv_up = C2f(fused_channel_p345_up, in_channels[2])
+        # self.p4_fuseconv_up = C2f(fused_channel_p345_up, in_channels[2])
+        self.p4_fuseconv_up = InvertedResidual(fused_channel_p345_up, in_channels[2], exp_ratio=8, act_layer=nn.Mish)
         self.p22p4_weight = SpatialWeight(in_channels=in_channels[0])
         self.p42p2_weight = ChannelWeight(in_channels=in_channels[2], out_channels=in_channels[0])
         self.p2_downconv_up = ConvBnAct(in_channels=in_channels[0], out_channels=in_channels[0], kernel_size=3, stride=2, act_layer=nn.Mish)
-        self.p3_fuseconv_up = C2f(fused_channel_p234_up, in_channels[1])
+        # self.p3_fuseconv_up = C2f(fused_channel_p234_up, in_channels[1])
+        self.p3_fuseconv_up = InvertedResidual(fused_channel_p234_up, in_channels[1], exp_ratio=8, act_layer=nn.Mish)
         
         # 下采样通路
         self.p3_downconv_down = ConvBnAct(in_channels=in_channels[1], out_channels=in_channels[1], kernel_size=3, stride=2, act_layer=nn.Mish)
         
-        self.p4_fuseconv_down = C2f(fused_channel_p34_down, in_channels[2])
+        # self.p4_fuseconv_down = C2f(fused_channel_p34_down, in_channels[2])
+        self.p4_fuseconv_down = InvertedResidual(fused_channel_p34_down, in_channels[2], exp_ratio=8, act_layer=nn.Mish)
         self.p4_downconv_down = ConvBnAct(in_channels=in_channels[2], out_channels=in_channels[2], kernel_size=3, stride=2, act_layer=nn.Mish)
         
-        self.p5_fuseconv_down = C2f(fused_channel_p45_down, in_channels[3])
+        # self.p5_fuseconv_down = C2f(fused_channel_p45_down, in_channels[3])
+        self.p5_fuseconv_down = InvertedResidual(fused_channel_p45_down, in_channels[3], exp_ratio=8, act_layer=nn.Mish)
     
     def forward(self, x):
         p2, p3, p4, p5 = x      # in: 40, 60, 96; p4: 112, 30, 48; p5: 160, 15, 24
