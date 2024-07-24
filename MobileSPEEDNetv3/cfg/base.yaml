@@ -7,7 +7,7 @@ accelerator: gpu        # 训练设备 cpu/gpu
 summary: rich           # 模型总结 rich/default
 deterministic: false     # 是否可复现
 benchmark: true        # 是否加速，和deterministic不可同时为True，deterministic为True时，benchmark参数无效
-debug: false             # 是否为debug模式
+debug: true             # 是否为debug模式
 limit_train_val: [0.1, 0.1]  # 用于debug时的训练部分和测试部分比例
 comet_api: agcu7oeqU395peWf6NCNqnTa7
 offline: false          # 是否离线训练
@@ -35,7 +35,7 @@ s: 0.1                              # ratio/sigma
 backbone: mobilenet_v3_large                      # EfficientNet
 pos_dim: 3                              # 位置维度
 pretrained: true
-neck: TriFPNAtt                            # FPNPAN/BiFPN/AFPN
+neck:                             # FPNPAN/BiFPN/AFPN
 pool_size: [4, 2, 1]                # 池化尺寸
 
 # ==========================loss===========================

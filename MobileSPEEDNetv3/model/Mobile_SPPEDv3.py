@@ -4,7 +4,7 @@ import torch.nn as nn
 from typing import List, Union
 from torch import Tensor
 
-from .block import SPPF, FPNPAN, RepECPHead, Conv2dNormActivation, DCNv2, TriFPN, TriFPNAtt
+from .block import SPPF, FPNPAN, RepECPHead, Conv2dNormActivation, DCNv2, TriFPN, TriFPNAtt, SCGHead
 from torchvision.models import mobilenet_v3_large, MobileNet_V3_Large_Weights, mobilenet_v3_small, MobileNet_V3_Small_Weights
 from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
 
@@ -32,8 +32,8 @@ class Mobile_SPEEDv3(nn.Module):
                     if len(module) == 3:
                         module[2] = nn.Mish()
         
-        self.SPPF_p5 = SPPF(in_channels=SPPF_in_channels,
-                            out_channels=SPPF_out_channels)
+        # self.SPPF_p5 = SPPF(in_channels=SPPF_in_channels,
+        #                     out_channels=SPPF_out_channels)
         
         if config["neck"] == "FPNPAN":
             self.neck = FPNPAN(in_channels=neck_in_channels)
@@ -45,14 +45,24 @@ class Mobile_SPEEDv3(nn.Module):
             self.stage = [4, 7, 13]
             neck_in_channels = [24, 40, 112, 160]
             self.neck = TriFPNAtt(in_channels=neck_in_channels)
-            
+        else:
+            self.stage = [7, 13]
+            # self.neck = nn.Identity()
         
-        self.head = RepECPHead(in_channels=neck_out_channels,
-                                pool_size=config["pool_size"],
-                                pos_dim=config["pos_dim"],
-                                yaw_dim=int(360 // config["stride"] + 1 + 2 * config["n"]),
-                                pitch_dim=int(180 // config["stride"] + 1 + 2 * config["n"]),
-                                roll_dim=int(360 // config["stride"] + 1 + 2 * config["n"]))
+        
+        # self.head = RepECPHead(in_channels=neck_out_channels,
+        #                         pool_size=config["pool_size"],
+        #                         pos_dim=config["pos_dim"],
+        #                         yaw_dim=int(360 // config["stride"] + 1 + 2 * config["n"]),
+        #                         pitch_dim=int(180 // config["stride"] + 1 + 2 * config["n"]),
+        #                         roll_dim=int(360 // config["stride"] + 1 + 2 * config["n"]))
+        self.head = SCGHead(in_channels=neck_out_channels,
+                            pool_size=config["pool_size"],
+                            pos_dim=config["pos_dim"],
+                            yaw_dim=int(360 // config["stride"] + 1 + 2 * config["n"]),
+                            pitch_dim=int(180 // config["stride"] + 1 + 2 * config["n"]),
+                            roll_dim=int(360 // config["stride"] + 1 + 2 * config["n"]))
+        
     
     def forward(self, x: Tensor):
         x = self.expand2rgb_conv(x)
@@ -61,9 +71,9 @@ class Mobile_SPEEDv3(nn.Module):
             features.append(self.features[self.stage[i]:self.stage[i+1]](features[-1]))
         features.append(self.features[self.stage[-1]:](features[-1]))
         
-        features[-1] = self.SPPF_p5(features[-1])
+        # features[-1] = self.SPPF_p5(features[-1])
         
-        features = self.neck(features)
+        # features = self.neck(features)
         
         pos, yaw, pitch, roll = self.head(features)
         return pos, yaw, pitch, roll
