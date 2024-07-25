@@ -304,8 +304,29 @@ class MLP(nn.Module):
         return x
 
 
-
-        
+class CoSE(nn.Module):
+    def __init__(self, in_channels: int):
+        super(CoSE, self).__init__()
+        C_ = sum(in_channels)
+        self.fc1 = nn.Linear(C_, C_ // 4)
+        self.act = nn.ReLU(inplace=True)
+        self.fc2 = nn.Linear(C_ // 4, C_)
+        self.softmax = nn.Softmax(dim=1)
+    
+    def forward(self, x):
+        p3, p4, p5 = x
+        p3_pool = F.adaptive_avg_pool2d(p3, (1, 1)).reshape(p3.shape[0], -1)
+        p4_pool = F.adaptive_avg_pool2d(p4, (1, 1)).reshape(p4.shape[0], -1)
+        p5_pool = F.adaptive_avg_pool2d(p5, (1, 1)).reshape(p5.shape[0], -1)
+        x = torch.cat([p3_pool, p4_pool, p5_pool], dim=1)
+        x = self.fc1(x)
+        x = self.act(x)
+        x = self.fc2(x)
+        x = self.softmax(x)
+        p3 = p3 * x[:, :p3.shape[1]].reshape(-1, p3.shape[1], 1, 1)
+        p4 = p4 * x[:, p3.shape[1]:p3.shape[1]+p4.shape[1]].reshape(-1, p4.shape[1], 1, 1)
+        p5 = p5 * x[:, p3.shape[1]+p4.shape[1]:].reshape(-1, p5.shape[1], 1, 1)
+        return p3, p4, p5
 
 
 # ==================== head ====================
@@ -356,10 +377,6 @@ class Head(nn.Module):
         )
         self.pos_hide_features = int(in_features * 0.2)
         self.ori_hide_features = in_features - self.pos_hide_features
-        self.pos_embedding = nn.Sequential(
-            nn.Linear(3, self.ori_hide_features),
-            nn.Tanh()
-        )
         self.pos_fc = nn.Sequential(
             nn.Linear(self.pos_hide_features, pos_dim),
         )
@@ -382,8 +399,7 @@ class Head(nn.Module):
         # pos_feature = x[:, :self.pos_hide_features]
         # ori_feature = x
         pos = self.pos_fc(pos_feature)
-        pos_embedding = self.pos_embedding(pos)
-        ori_feature = ori_feature + pos_embedding
+        ori_feature = ori_feature
         yaw = self.yaw_fc(ori_feature)
         pitch = self.pitch_fc(ori_feature)
         roll = self.roll_fc(ori_feature)
@@ -396,70 +412,4 @@ class RepECPHead(nn.Sequential):
             RSC(),
             Head(sum([int(in_channels[i]* pool_size[i]**2) for i in range(3)]), pos_dim, yaw_dim, pitch_dim, roll_dim),
         )
-
-
-
-class SCGHead(nn.Module):
-    def __init__(self, in_channels: List[int], pool_size: List[int], pos_dim: int, yaw_dim: int, pitch_dim: int, roll_dim: int, sg: List[int] = [4, 4]):
-        super(SCGHead, self).__init__()
-        
-        self.sg = sg
-        self.spatial_pool = nn.AdaptiveAvgPool2d(sg)
-        C_ = sum(in_channels)*sg[0]*sg[1]
-        g = sg[0]*sg[1]
-        self.g = g
-        self.group_att_conv1 = nn.Conv2d(in_channels=C_,
-                                         out_channels=C_//2,
-                                         kernel_size=1,
-                                         stride=1,
-                                         padding=0,
-                                         groups=g)
-        self.act = nn.ReLU(inplace=True)
-        self.group_att_conv2 = nn.Conv2d(in_channels=C_//2,
-                                         out_channels=C_,
-                                         kernel_size=1,
-                                         stride=1,
-                                         padding=0,
-                                         groups=g)
-        self.softmax = nn.Softmax(dim=1)
-        self.mlp = MLP(in_features=g, out_features=g, hidden_features=g//2)
-        
-        self.head = nn.Sequential(
-            ECP(pool_size),
-            RSC(),
-            Head(sum([int(in_channels[i]* pool_size[i]**2) for i in range(3)]), pos_dim, yaw_dim, pitch_dim, roll_dim),
-        )
-    
-    def forward(self, x):
-        p3, p4, p5 = x
-        B, C, H, W = p3.size()
-        # 将p4, p5的特征图resize到p3的大小
-        p4 = F.interpolate(p4, size=(H, W), mode="bilinear", align_corners=True)
-        p5 = F.interpolate(p5, size=(H, W), mode="bilinear", align_corners=True)
-        # cat
-        x = torch.cat([p3, p4, p5], dim=1)      # B, C, H, W
-        x_ = x.clone()
-        B, C, H, W = x.size()
-        # spatial group
-        x_ = self.spatial_pool(x_)                # B, C, sg[0], sg[1]
-        # 展平
-        x_ = x_.reshape(B, -1, 1, 1)              # B, C*sg[0]*sg[1], 1, 1
-        # group attention
-        weight = self.group_att_conv1(x_)             # B, C*sg[0]*sg[1]//2, 1, 1
-        weight = self.act(weight)
-        weight = self.group_att_conv2(weight)             # B, C*sg[0]*sg[1], 1, 1
-        weight = weight.reshape(B, -1, self.sg[0], self.sg[1])              # B, C, sg[0], sg[1]
-        weight = self.softmax(weight)                     # B, C, sg[0], sg[1]
-        # avg
-        avg = torch.mean(weight, dim=1, keepdim=True)               # B, 1, sg[0], sg[1]
-        avg = avg.squeeze(dim=1).reshape(B, -1)                # B, sg[0]*sg[1]
-        avg_weight = self.mlp(avg)                            # B, sg[0]*sg[1]
-        avg_weight = avg_weight.reshape(B, 1, self.sg[0], self.sg[1])  # B, 1, sg[0], sg[1]
-        # weighted multi
-        weight = weight * avg_weight                    # B, C, sg[0], sg[1]
-        weight = weight.repeat_interleave(H//self.sg[0], dim=2).repeat_interleave(W//self.sg[1], dim=3)  # B, C, H, W
-        x = x * weight
-        # global pool
-        p3, p4, p5 = torch.split(x, [p3.size(1), p4.size(1), p5.size(1)], dim=1)
-        return self.head([p3, p4, p5])
 # ================== head end ==================

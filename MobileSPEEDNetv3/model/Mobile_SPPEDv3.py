@@ -4,7 +4,7 @@ import torch.nn as nn
 from typing import List, Union
 from torch import Tensor
 
-from .block import SPPF, FPNPAN, RepECPHead, Conv2dNormActivation, DCNv2, TriFPN, TriFPNAtt, SCGHead
+from .block import SPPF, FPNPAN, RepECPHead, Conv2dNormActivation, DCNv2, TriFPN, TriFPNAtt, CoSE
 from torchvision.models import mobilenet_v3_large, MobileNet_V3_Large_Weights, mobilenet_v3_small, MobileNet_V3_Small_Weights
 from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
 
@@ -49,19 +49,13 @@ class Mobile_SPEEDv3(nn.Module):
             self.stage = [7, 13]
             # self.neck = nn.Identity()
         
-        
-        # self.head = RepECPHead(in_channels=neck_out_channels,
-        #                         pool_size=config["pool_size"],
-        #                         pos_dim=config["pos_dim"],
-        #                         yaw_dim=int(360 // config["stride"] + 1 + 2 * config["n"]),
-        #                         pitch_dim=int(180 // config["stride"] + 1 + 2 * config["n"]),
-        #                         roll_dim=int(360 // config["stride"] + 1 + 2 * config["n"]))
-        self.head = SCGHead(in_channels=neck_out_channels,
-                            pool_size=config["pool_size"],
-                            pos_dim=config["pos_dim"],
-                            yaw_dim=int(360 // config["stride"] + 1 + 2 * config["n"]),
-                            pitch_dim=int(180 // config["stride"] + 1 + 2 * config["n"]),
-                            roll_dim=int(360 // config["stride"] + 1 + 2 * config["n"]))
+        self.cose = CoSE(in_channels=neck_out_channels)
+        self.head = RepECPHead(in_channels=neck_out_channels,
+                                pool_size=config["pool_size"],
+                                pos_dim=config["pos_dim"],
+                                yaw_dim=int(360 // config["stride"] + 1 + 2 * config["n"]),
+                                pitch_dim=int(180 // config["stride"] + 1 + 2 * config["n"]),
+                                roll_dim=int(360 // config["stride"] + 1 + 2 * config["n"]))
         
     
     def forward(self, x: Tensor):
@@ -74,6 +68,7 @@ class Mobile_SPEEDv3(nn.Module):
         # features[-1] = self.SPPF_p5(features[-1])
         
         # features = self.neck(features)
+        features = self.cose(features)
         
         pos, yaw, pitch, roll = self.head(features)
         return pos, yaw, pitch, roll
