@@ -7,7 +7,7 @@ accelerator: gpu        # 训练设备 cpu/gpu
 summary: rich           # 模型总结 rich/default
 deterministic: false     # 是否可复现
 benchmark: true        # 是否加速，和deterministic不可同时为True，deterministic为True时，benchmark参数无效
-debug: true             # 是否为debug模式
+debug: false             # 是否为debug模式
 limit_train_val: [0.1, 0.1]  # 用于debug时的训练部分和测试部分比例
 comet_api: agcu7oeqU395peWf6NCNqnTa7
 offline: false          # 是否离线训练
@@ -19,8 +19,8 @@ self_supervised: false
 
 # =========================dataset=========================
 data_dir: ../datasets/speed     # 数据路径
-workers: 10            # dataloader workers
-ram: false            # 是否使用内存加载数据
+workers: 16            # dataloader workers
+ram: true            # 是否使用内存加载数据
 imgsz: [480, 768]     # 图片大小 [480, 768]
 resize_first: false    # 是否先resize
 
@@ -28,7 +28,7 @@ resize_first: false    # 是否先resize
 # =======================encoder-decoder===================
 encoder: Linear                     # Linear/Gauss
 stride: 1                            # 步长 度
-n: 5                                # neighbor/tau
+n: 0                                # neighbor/tau
 s: 0.1                              # ratio/sigma
 
 # ==========================model==========================
@@ -39,7 +39,7 @@ neck:                             # FPNPAN/BiFPN/AFPN
 pool_size: [4, 2, 1]                # 池化尺寸
 
 # ==========================loss===========================
-ALPHA: [1, 5]                       # Score = ALPHA[0] * POS_Error + ALPHA[1] * Euler_Error
+ALPHA: [1, 4]                       # Score = ALPHA[0] * POS_Error + ALPHA[1] * Euler_Error
 BETA: [1, 8, 5]                  # Loss = BETA[0] * POS_LOSS + BETA[1] * Euler_LOSS + BETA[2] * CLS_LOSS
 pos_loss: MSE                       # 位置损失函数 MAE/MSE/Huber/Log_Cosh (regression loss)
 euler_loss: CrossEntropy              # 姿态值损失函数 CrossEntropy/Focal
@@ -51,7 +51,7 @@ lr0: 0.0005            # 初始学习率
 momentum: 0.937       # 动量
 weight_decay: 0.00001    # 权重衰减
 epoch: 500            # 训练轮数
-batch_size: 8        # 批次大小
+batch_size: 32        # 批次大小
 
 precision: mix        # 训练精度 half/mix/double/full/int8
 accumulate_grad_batches: 1            # 累计梯度批次

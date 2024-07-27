@@ -32,8 +32,8 @@ class Mobile_SPEEDv3(nn.Module):
                     if len(module) == 3:
                         module[2] = nn.Mish()
         
-        # self.SPPF_p5 = SPPF(in_channels=SPPF_in_channels,
-        #                     out_channels=SPPF_out_channels)
+        self.SPPF_p5 = SPPF(in_channels=SPPF_in_channels,
+                            out_channels=SPPF_out_channels)
         
         if config["neck"] == "FPNPAN":
             self.neck = FPNPAN(in_channels=neck_in_channels)
@@ -65,7 +65,7 @@ class Mobile_SPEEDv3(nn.Module):
             features.append(self.features[self.stage[i]:self.stage[i+1]](features[-1]))
         features.append(self.features[self.stage[-1]:](features[-1]))
         
-        # features[-1] = self.SPPF_p5(features[-1])
+        features[-1] = self.SPPF_p5(features[-1])
         
         # features = self.neck(features)
         features = self.cose(features)

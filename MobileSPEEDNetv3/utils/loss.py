@@ -48,7 +48,7 @@ def Focal_Loss(pre: Tensor, label: Tensor, gamma: float = 2.0, alpha: float = 0.
     FLoss = alpha * torch.pow(1 - pre, gamma) * CE
     return torch.mean(torch.sum(FLoss, dim=1))
 
-@torch.compile
+@torch.jit.script
 def Arccos_Loss(pre: Tensor, label: Tensor):
     return torch.mean(2 * torch.arccos(torch.abs(torch.sum(pre * label, dim=1))))
 
