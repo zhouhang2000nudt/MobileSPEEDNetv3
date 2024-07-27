@@ -93,7 +93,9 @@ class LightningMobileSPEEDv3(L.LightningModule):
             train_roll_loss = self.roll_loss(roll, labels["roll_encode"])
             train_ori_loss = self.ori_loss(ori_decode, labels["ori"])
 
-        train_loss = self.BETA[0] * train_pos_loss + self.BETA[1] * (train_yaw_loss + train_pitch_loss + train_roll_loss) + self.BETA[2] * train_ori_loss
+        s = 1 / (train_yaw_loss + train_pitch_loss + train_roll_loss)
+        # train_loss = self.BETA[0] * train_pos_loss + self.BETA[1] * (train_yaw_loss + train_pitch_loss + train_roll_loss) + self.BETA[2] * train_ori_loss
+        train_loss = self.BETA[0] * train_pos_loss + 3*self.BETA[1] * (train_yaw_loss**2 + train_pitch_loss**2 + train_roll_loss**2) * s + self.BETA[2] * train_ori_loss
 
         self.train_pos_loss.update(train_pos_loss, num)
         self.train_yaw_loss.update(train_yaw_loss, num)

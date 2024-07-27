@@ -49,7 +49,7 @@ class Mobile_SPEEDv3(nn.Module):
             self.stage = [7, 13]
             # self.neck = nn.Identity()
         
-        self.cose = CoSE(in_channels=neck_out_channels)
+        # self.cose = CoSE(in_channels=neck_out_channels)
         self.head = RepECPHead(in_channels=neck_out_channels,
                                 pool_size=config["pool_size"],
                                 pos_dim=config["pos_dim"],
@@ -67,8 +67,8 @@ class Mobile_SPEEDv3(nn.Module):
         
         features[-1] = self.SPPF_p5(features[-1])
         
-        # features = self.neck(features)
-        features = self.cose(features)
+        features = self.neck(features)
+        # features = self.cose(features)
         
         pos, yaw, pitch, roll = self.head(features)
         return pos, yaw, pitch, roll
